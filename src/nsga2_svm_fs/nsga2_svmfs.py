@@ -43,8 +43,7 @@ class NSGA2_SVMFS:
 
     def __init__(self, method, data, costs, population_size, inputs, output, num_selected_features,
                  allow_clones=0, p_mutation=0.7, p_mutate_individual=0.4,
-                 p_mutate_feature=0.4, p_mutate_coord=0.2, coord_mutation_type=0, logger=None):
-        self.logger = logger
+                 p_mutate_feature=0.4, p_mutate_coord=0.2, coord_mutation_type=0):
         self.method = method
         self.data = data
         self.costs = costs
@@ -78,28 +77,19 @@ class NSGA2_SVMFS:
             self.costs, self.num_selected_features, self.allow_clones, self.method
         )
         self.population.fnds(self.method)
-        msg = f"Initial population: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0"
-        logger.info(msg)
-        if self.logger and callable(self.logger):
-            self.logger(msg)
+        logger.info(f"Initial population: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
 
         i = 1
         if train == 'sec':
             max_time = time() + num_iter
             while time() < max_time:
                 self.nsga2()
-                msg = f"Iteration {i}: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0"
-                logger.info(msg)
-                if self.logger and callable(self.logger):
-                    self.logger(msg)
+                logger.info(f"Iteration {i}: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
                 i += 1
         elif train == 'iter':
             while i <= num_iter:
                 self.nsga2()
-                msg = f"Iteration {i}: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0"
-                logger.info(msg)
-                if self.logger and callable(self.logger):
-                    self.logger(msg)
+                logger.info(f"Iteration {i}: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
                 i += 1
         else:
             raise ValueError("Invalid training method. Choose 'time' or 'iter'.")
