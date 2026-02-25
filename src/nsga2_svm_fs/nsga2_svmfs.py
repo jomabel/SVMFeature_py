@@ -59,7 +59,7 @@ class NSGA2_SVMFS:
         self.coord_mutation_type = coord_mutation_type
 
         self.population = None
-    def run(self, train='time', num_iter=10):
+    def run(self, train='sec', num_iter=10):
         """
         Execute the NSGA-II optimization process.
 
@@ -92,7 +92,7 @@ class NSGA2_SVMFS:
                 logger.info(f"Iteration {i}: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
                 i += 1
         else:
-            raise ValueError("Invalid training method. Choose 'time' or 'iter'.")
+            raise ValueError("Invalid training method. Choose 'sec' or 'iter'.")
 
     def nsga2(self):
         """

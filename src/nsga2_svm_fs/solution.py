@@ -229,6 +229,11 @@ class Solution:
         Constructs the classification planes from the vectors and coordinates.
 
         The first plane will be for class -1, the second for class 1, and the third will be the intermediate plane.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            Full dataset.
         """
 
         # Select the relevant rows and columns in a single operation

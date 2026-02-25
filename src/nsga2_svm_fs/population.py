@@ -82,6 +82,8 @@ class Population:
             Number of features to select in each solution.
         allow_clones : bool
             Whether to allow duplicated (clone) individuals in the population.
+        method : str
+            The method to use for dominance comparison.
 
         Returns
         -------
@@ -113,6 +115,8 @@ class Population:
         ----------
         evaluated_solution : Solution
             The solution to check for duplication against the current population.
+        method : str
+            The method to use for dominance comparison.
 
         Returns
         -------
@@ -211,30 +215,6 @@ class Population:
             self.fronts.append(next_front)
 
         self.generate_solutions_df()
-
-    def check_balance(self, child, tau=0.2):
-        """
-        Comprueba si una solución cumple la tolerancia de balance relativa.
-
-        Parameters
-        ----------
-        child : Solution
-            La solución a evaluar.
-        tau : float
-            Tolerancia relativa máxima permitida (|FP-FN| / (FP+FN)).
-
-        Returns
-        -------
-        bool
-            True si la solución cumple la tolerancia, False si está demasiado desbalanceada.
-        """
-        fp = child.objective[3]
-        fn = child.objective[4]
-        if (fp + fn) == 0:
-            return True  # Evita división por cero, consideramos balanceada
-        imbalance = abs(fp - fn) / (fp + fn)
-        return imbalance <= tau
-
 
     def create_new_population(
             self,
