@@ -1,6 +1,8 @@
 from copy import deepcopy
 from time import time
 from matplotlib.pyplot import show, figure, xlabel, ylabel, title, grid, scatter
+import os
+import pandas as pd
 
 from .population import Population
 import logging
@@ -162,3 +164,39 @@ class NSGA2_SVMFS:
             ax.set_zlabel(cfg['zlabel'])
             ax.set_title(cfg['title'])
             show()
+
+    def save_results(self, dataset_name, output_dir="results", iteration_val=None, iteration_type=None):
+        """
+        Save the Pareto front (front 0) to a CSV file.
+
+        Parameters
+        ----------
+        dataset_name : str
+            Name of the dataset (used for directory naming).
+        output_dir : str, optional
+            Base directory to save the results (default is "results").
+        iteration_val : int, optional
+            Number of iterations or seconds.
+        iteration_type : str, optional
+            Training mode ('iter' or 'sec').
+        """
+        results = self.population.solutions_df
+        pareto_front = results[results.FRONT == 0]
+
+        directory = os.path.join(output_dir, dataset_name, self.method)
+        os.makedirs(directory, exist_ok=True)
+
+        base_filename = f"{self.population_size}"
+        if iteration_type and iteration_val:
+            base_filename = f"{base_filename}_{iteration_type}_{iteration_val}"
+
+        output_file = os.path.join(directory, f"{base_filename}.csv")
+
+        counter = 1
+        filename, extension = os.path.splitext(output_file)
+        while os.path.exists(output_file):
+            output_file = f"{filename}_{counter}{extension}"
+            counter += 1
+
+        pareto_front.to_csv(output_file, index=False)
+        print(f"Pareto front saved in: {output_file}")
