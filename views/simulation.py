@@ -2,7 +2,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 from src.nsga2_svm_fs.nsga2_svmfs import NSGA2_SVMFS
 from streamlit import header, file_uploader, checkbox, subheader, selectbox, number_input, radio, button, empty, \
-    success, dataframe, error, stop, spinner, write
+    success, dataframe, error, stop, spinner, write, expander, slider
 from pandas import read_csv, DataFrame
 
 DEFAULT_DATA_URL = "https://raw.githubusercontent.com/danielvacarre/NSGAII_SVM_FS/main/data/09Colon_p.txt"
@@ -74,6 +74,15 @@ def show_simulation():
         iter_type = radio("⏱ Training mode", ["iter", "sec"])
         iter_val = number_input(f"Number of {iter_type}", min_value=1, value=5)
 
+        # === Advanced Parameters ===
+        with expander("🛡️ Advanced Settings"):
+            allow_clones = selectbox("Allow clones?", [0, 1], index=0, help="Whether to allow duplicated individuals in the population.")
+            p_mutation = slider("Global mutation probability", 0.0, 1.0, 0.7)
+            p_mutate_individual = slider("Individual mutation probability", 0.0, 1.0, 0.4)
+            p_mutate_feature = slider("Feature mutation probability", 0.0, 1.0, 0.4)
+            p_mutate_coord = slider("Coordinate mutation probability", 0.0, 1.0, 0.2)
+            coord_mutation_type = selectbox("Coordinate mutation type", [0, 1], index=0, help="0: Scaling, 1: Full replacement")
+
         # === Run NSGA-II ===
         if button("▶️ Run simulation"):
             with spinner("⏳ Running NSGA-II..."):
@@ -86,12 +95,18 @@ def show_simulation():
 
                 algorithm = NSGA2_SVMFS(
                     method=method,
-                    data= data_scaled,
+                    data=data_scaled,
                     costs=costs,
                     population_size=population_size,
                     inputs=input_cols,
                     output=output_col,
                     num_selected_features=num_features,
+                    allow_clones=allow_clones,
+                    p_mutation=p_mutation,
+                    p_mutate_individual=p_mutate_individual,
+                    p_mutate_feature=p_mutate_feature,
+                    p_mutate_coord=p_mutate_coord,
+                    coord_mutation_type=coord_mutation_type,
                     logger=log
                 )
                 algorithm.run(train=iter_type, num_iter=iter_val)
