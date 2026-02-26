@@ -45,7 +45,7 @@ class NSGA2_SVMFS:
 
     def __init__(self, method, data, costs, population_size, inputs, output, num_selected_features,
                  allow_clones=0, p_mutation=0.7, p_mutate_individual=0.4,
-                 p_mutate_feature=0.4, p_mutate_coord=0.2, coord_mutation_type=0):
+                 p_mutate_feature=0.4, p_mutate_coord=0.2, coord_mutation_type=0, logger=None):
         self.method = method
         self.data = data
         self.costs = costs
@@ -59,6 +59,7 @@ class NSGA2_SVMFS:
         self.p_mutate_feature = p_mutate_feature
         self.p_mutate_coord = p_mutate_coord
         self.coord_mutation_type = coord_mutation_type
+        self.custom_logger = logger
 
         self.population = None
     def run(self, train='sec', num_iter=10):
@@ -79,19 +80,19 @@ class NSGA2_SVMFS:
             self.costs, self.num_selected_features, self.allow_clones, self.method
         )
         self.population.fnds(self.method)
-        logger.info(f"Initial population: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
+        self._log(f"Initial population: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
 
         i = 1
         if train == 'sec':
             max_time = time() + num_iter
             while time() < max_time:
                 self.nsga2()
-                logger.info(f"Iteration {i}: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
+                self._log(f"Iteration {i}: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
                 i += 1
         elif train == 'iter':
             while i <= num_iter:
                 self.nsga2()
-                logger.info(f"Iteration {i}: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
+                self._log(f"Iteration {i}: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
                 i += 1
         else:
             raise ValueError("Invalid training method. Choose 'sec' or 'iter'.")
@@ -199,4 +200,13 @@ class NSGA2_SVMFS:
             counter += 1
 
         pareto_front.to_csv(output_file, index=False)
-        print(f"Pareto front saved in: {output_file}")
+        self._log(f"Pareto front saved in: {output_file}")
+
+    def _log(self, message):
+        """Helper to log messages using standard logger and/or custom callback."""
+        logger.info(message)
+        if self.custom_logger:
+            if callable(self.custom_logger):
+                self.custom_logger(message)
+            elif hasattr(self.custom_logger, 'info'):
+                self.custom_logger.info(message)
