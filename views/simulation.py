@@ -47,7 +47,7 @@ def show_simulation():
 
             if has_costs:
                 costs = data.iloc[0].values[1:].tolist()
-                data = data.drop(index=data.index[0])
+                data.drop(index=data.index[0], inplace=True)
             else:
                 costs = [0.0] * len(input_cols)
                 dominance_methods = [method for method in dominance_methods if "COST" not in method]

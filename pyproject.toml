@@ -9,8 +9,8 @@ description = "NSGA-II for feature selection using SVM"
 readme = "README.md"
 authors = [
     { name = "José Manuel Martínez Belando"},
-    { name = "Antonio Jesús Banegas"},
-    { name = "Daniel Valero" }
+    { name = "Antonio Jesús Banegas Luna"},
+    { name = "Daniel Valero Carreras" }
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
