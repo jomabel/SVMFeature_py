@@ -10,10 +10,9 @@ It is a metaheuristic that solves the **soft-margin Support Vector Machine (SVM)
 - 📈 Multi-objective optimization
   - Classic SVM objectives: margin distance and epsilon
   - True Positives (TP) and False Positives (FP)
-  - Classification cost
 - 🔍 Visualization of the Pareto front and classifier metrics
 - 🧬 Analysis of the most frequently selected features and vectors
-- 📤 Export of optimal solutions
+- 📤 Export of optimal solutions to CSV
 
 ## 📦 Installation
 
@@ -24,8 +23,11 @@ To install the library locally using `pip`:
 git clone https://github.com/jomabel/SVMFeature_py.git
 cd SVMFeature_py
 
-# Install the package
-pip install .
+# Install the package in editable mode for development, or just pip install .
+pip install -e .
+
+# Install dependencies for the Streamlit app
+pip install -r requirements.txt
 ```
 
 ## 💻 Basic Usage
@@ -41,59 +43,75 @@ from nsga2_svm_fs import NSGA2_SVMFS
 # Example with '09Colon_p.txt': no header, first column is target, first row has feature costs.
 data = pd.read_csv("data/09Colon_p.txt", sep=";", header=None)
 
-# 2. Drop the index column and extract feature names and target
+# 2. Preprocess: drop index, define columns
 data = data.drop(columns=[0])
 num_cols = data.shape[1]
-column_names = ['y'] + [f'x{i}' for i in range(1, num_cols)]
-data.columns = column_names
+data.columns = ['y'] + [f'x{i}' for i in range(1, num_cols)]
+
 output_col = data.columns[0]
 input_cols = data.columns[1:].tolist()
 
-# 3. Extract costs and remove that row from data
+# 3. Handle costs (first row in this dataset)
 costs = data.iloc[0].values[1:].tolist()
 data = data.drop(index=data.index[0])
 
-# 4. Normalize the input features (recommended)
+# 4. Normalize features
 scaler = MinMaxScaler()
-scaled_features = scaler.fit_transform(data[input_cols])
-data_scaled = pd.DataFrame(scaled_features, columns=input_cols)
-data_scaled[output_col] = data[output_col].values
+data[input_cols] = scaler.fit_transform(data[input_cols])
 
-# 5. Initialize the optimizer
-# Available methods: 'DIST-EPS', 'MC'
+# 5. Initialize and run the optimizer
 optimizer = NSGA2_SVMFS(
-    method="DIST-EPS",
-    data=data_scaled,
+    method="DIST-EPS", # Options: 'DIST-EPS', 'MC'
+    data=data,
     costs=costs,
     population_size=10,
     inputs=input_cols,
     output=output_col,
-    num_selected_features=5,
-    # Optional parameters with their default values:
-    allow_clones=0,
-    p_mutation=0.7,
-    p_mutate_individual=0.4,
-    p_mutate_feature=0.4,
-    p_mutate_coord=0.2,
-    coord_mutation_type=0
+    num_selected_features=5
 )
 
-# 6. Run the optimization
-# train mode can be 'sec' (seconds) or 'iter' (iterations)
-optimizer.run(train="iter", num_iter=5)
+optimizer.run(train="iter", num_iter=20)
 
-# 7. Get and save the Pareto front
-results = optimizer.population.solutions_df
-pareto_front = results[results.FRONT == 0]
-optimizer.save_results("09Colon_p", iteration_val=5, iteration_type="iter")
-
-# 8. Visualize the Pareto front
+# 6. Save and Visualize
+optimizer.save_results("09Colon_p", iteration_val=20, iteration_type="iter")
 optimizer.draw_solution()
 ```
 
-### 📱 Streamlit App
-If you wish to run the interactive web application, you can execute the included Streamlit app:
+## 🛠️ API Reference
+
+### `NSGA2_SVMFS` (Class)
+
+The main class to initialize and run the optimization.
+
+#### `__init__(...)`
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `method` | `str` | Dominance method: `'DIST-EPS'` (Distance-Epsilon) or `'MC'` (Misclassification). |
+| `data` | `pd.DataFrame`| The dataset containing features and target. |
+| `costs` | `list` | Costs associated with each feature. |
+| `population_size`| `int` | Size of the population. |
+| `inputs` | `list` | Names of the input feature columns. |
+| `output` | `str` | Name of the target column. |
+| `num_selected_features`| `int` | Max number of features to select. |
+| `allow_clones` | `int` | `0` (default) or `1`. Whether to allow duplicate solutions. |
+| `p_mutation` | `float` | Probability of mutation (default `0.7`). |
+| `logger` | `fn` | Optional callback function for custom logging. |
+
+#### `run(train='iter', num_iter=10)`
+Starts the optimization process.
+- `train`: `'iter'` (iterations) or `'sec'` (seconds).
+- `num_iter`: Total number of iterations or seconds to run.
+
+#### `draw_solution()`
+Generates a scatter plot of the Pareto front (Front 0).
+
+#### `save_results(dataset_name, output_dir="results", ...)`
+Exports the current Pareto front to a CSV file.
+- `dataset_name`: Name for the output subfolder.
+- `output_dir`: Root directory for results.
+
+## 📱 Streamlit App
+If you wish to run the interactive web application:
 ```bash
-pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
