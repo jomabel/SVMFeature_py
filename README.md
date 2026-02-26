@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 ## 💻 Basic Usage
 
-You can use the library in your Python scripts as follows:
+The library can be used programmatically (see `example_usage.py`) or via the command line (see `main.py`).
 
 ```python
 import pandas as pd
@@ -84,18 +84,22 @@ optimizer.draw_solution()
 The main class to initialize and run the optimization.
 
 #### `__init__(...)`
-| Parameter | Type | Description |
-| :--- | :--- | :--- |
-| `method` | `str` | Dominance method: `'DIST-EPS'` (Distance-Epsilon) or `'MC'` (Misclassification). |
-| `data` | `pd.DataFrame`| The dataset containing features and target. |
-| `costs` | `list` | Costs associated with each feature. |
-| `population_size`| `int` | Size of the population. |
-| `inputs` | `list` | Names of the input feature columns. |
-| `output` | `str` | Name of the target column. |
-| `num_selected_features`| `int` | Max number of features to select. |
-| `allow_clones` | `int` | `0` (default) or `1`. Whether to allow duplicate solutions. |
-| `p_mutation` | `float` | Probability of mutation (default `0.7`). |
-| `logger` | `fn` | Optional callback function for custom logging. |
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `method` | `str` | - | Dominance method: `'DIST-EPS'` (Distance-Epsilon) or `'MC'` (Misclassification). |
+| `data` | `pd.DataFrame`| - | The dataset containing features and target column. |
+| `costs` | `list` | - | List of costs associated with each feature. |
+| `population_size`| `int` | - | Size of the population. |
+| `inputs` | `list` | - | Names of the input feature columns. |
+| `output` | `str` | - | Name of the target column. |
+| `num_selected_features`| `int` | - | Maximum number of features to be selected. |
+| `allow_clones` | `int` | `0` | `0` or `1`. Whether to allow duplicated individuals in the population. |
+| `p_mutation` | `float` | `0.7` | Global mutation probability. |
+| `p_mutate_individual` | `float` | `0.4` | Probability of mutating an individual. |
+| `p_mutate_feature` | `float` | `0.4` | Probability of mutating a feature selection. |
+| `p_mutate_coord` | `float` | `0.2` | Probability of mutating a coordinate (hyperparameter). |
+| `coord_mutation_type` | `int` | `0` | Coordinate mutation type (0: Scaling, 1: Full replacement). |
+| `logger` | `fn` | `None` | Optional callback function for custom logging. |
 
 #### `run(train='iter', num_iter=10)`
 Starts the optimization process.
@@ -105,12 +109,37 @@ Starts the optimization process.
 #### `draw_solution()`
 Generates a scatter plot of the Pareto front (Front 0).
 
-#### `save_results(dataset_name, output_dir="results", ...)`
+#### `save_results(dataset_name, output_dir="results", iteration_val=None, iteration_type=None)`
 Exports the current Pareto front to a CSV file.
 - `dataset_name`: Name for the output subfolder.
-- `output_dir`: Root directory for results.
+- `output_dir`: Root directory for results (default: `"results"`).
+- `iteration_val`: Optional iteration value to include in the filename.
+- `iteration_type`: Optional iteration type (`'iter'` or `'sec'`) to include in the filename.
 
-## 📱 Streamlit App
+## �️ Command Line (main.py)
+
+If you use the `main.py` script, these are the **default values** applied if flags are not provided:
+
+| Option | Default Value | Description |
+| :--- | :--- | :--- |
+| `--method` | `"DIST-EPS"` | Dominance method (`"DIST-EPS"`, `"MC"`). |
+| `--population_size` | `10` | Size of the population. |
+| `--num_features` | `5` | Features to be selected. |
+| `--iter_type` | `"iter"` | Training mode (`"iter"` or `"sec"`). |
+| `--iter_val` | `5` | Iterations or seconds value. |
+| `--has_header` | `"no"` | Dataset includes header. |
+| `--has_index` | `"yes"` | Dataset includes index column. |
+| `--has_costs` | `"yes"` | Dataset includes costs row. |
+| `--separator` | `","` | CSV separator character. |
+| `--normalize` | `"yes"` | Normalize input features. |
+| `--allow_clones` | `0` | Allow duplicate individuals. |
+| `--p_mutation` | `0.7` | Global mutation probability. |
+| `--p_mutate_individual` | `0.4` | Individual mutation probability. |
+| `--p_mutate_feature` | `0.4` | Feature mutation probability. |
+| `--p_mutate_coord` | `0.2` | Coordinate mutation probability. |
+| `--coord_mutation_type` | `0` | 0: Scaling, 1: Full replacement. |
+
+## �📱 Streamlit App
 If you wish to run the interactive web application:
 ```bash
 streamlit run streamlit_app.py
