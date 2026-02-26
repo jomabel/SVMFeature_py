@@ -14,7 +14,7 @@ def show_simulation():
     uploaded_file = file_uploader("📂 Upload your CSV or TXT file", type=["csv", "txt"])
     write("An example dataset is available in: https://github.com/danielvacarre/NSGAII_SVM_FS/blob/main/data/09Colon_p.txt.")
 
-    dominance_methods = ["DIST-EPS", "DIST-EPS-COST", "MC", "MC-COST"]
+    dominance_methods = ["DIST-EPS", "MC"]
 
     if uploaded_file:
 

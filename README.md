@@ -14,6 +14,23 @@ It is a metaheuristic that solves the **soft-margin Support Vector Machine (SVM)
 - 🧬 Analysis of the most frequently selected features and vectors
 - 📤 Export of optimal solutions to CSV
 
+## 📂 Project Structure
+
+Es fundamental distinguir que la **librería principal** es únicamente la carpeta `nsga2_svm_fs`. El resto de archivos son herramientas de apoyo, ejemplos o la aplicación web:
+
+### 📗 Librería Core (`src/nsga2_svm_fs/`)
+Este es el **único** código que constituye el paquete `nsga2_svm_fs`. Es lo que se instala y lo único necesario para integrar el algoritmo en otros proyectos:
+- `nsga2_svmfs.py`: Clase principal `NSGA2_SVMFS`.
+- `population.py` y `solution.py`: Lógica del algoritmo NSGA-II.
+
+### 📱 Herramientas de Apoyo y Aplicación
+El resto del repositorio **no** forma parte de la librería core, pero es necesario para la demostración y ejemplos:
+- `streamlit_app.py` y `views/`: Dashboard interactivo (requieren la librería para funcionar).
+- `src/utils/visualization.py`: Generación de gráficos para la dashboard.
+- `main.py` y `example_usage.py`: Scripts de ejemplo para ejecución por terminal o código.
+
+---
+
 ## 📦 Installation
 
 To install the library locally using `pip`:
@@ -140,7 +157,14 @@ If you use the `main.py` script, these are the **default values** applied if fla
 | `--coord_mutation_type` | `0` | 0: Scaling, 1: Full replacement. |
 
 ## 📱 Streamlit App
-If you wish to run the interactive web application:
-```bash
-streamlit run streamlit_app.py
-```
+
+The Streamlit app is a dashboard built **on top** of the library. To run it, you must have the full repository cloned (including the `views/` folder).
+
+1. **Install requirements**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. **Launch the app**:
+   ```bash
+   streamlit run streamlit_app.py
+   ```

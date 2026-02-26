@@ -1,6 +1,6 @@
 from ast import literal_eval
 from collections import Counter
-from streamlit import header, success, dataframe, subheader, plotly_chart, error, columns, markdown
+from streamlit import header, success, dataframe, subheader, plotly_chart, error, columns, markdown, button
 from src.utils.visualization import plot_pareto_front
 
 
@@ -13,6 +13,10 @@ def show_results(algorithm,method):
 
     success("✅ Simulation completed.")
     dataframe(pareto_front)
+
+    if button("💾 Save results to CSV"):
+        algorithm.save_results("streamlit_upload")
+        success(f"📁 Pareto front saved successfully in results/streamlit_upload/{method}/")
 
     # === Visualization ===
     subheader("🌐 Pareto Front Visualization")
