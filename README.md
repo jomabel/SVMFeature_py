@@ -34,29 +34,41 @@ You can use the library in your Python scripts as follows:
 
 ```python
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 from nsga2_svm_fs import NSGA2_SVMFS
 
-# 1. Load your dataset
-# For example, a CSV where the last column is the target class (-1 or 1)
-data = pd.read_csv("your_dataset.csv")
+# 1. Load the included dataset
+# Example with '09Colon_p.txt': no header, first column is target, first row has feature costs.
+data = pd.read_csv("data/09Colon_p.txt", sep=";", header=None)
 
-# 2. Define parameters
-inputs = ["feature1", "feature2", "feature3", "feature4"]  # List of input feature names
-output = "target"  # Name of the target variable column
-costs = [1.0, 1.5, 0.8, 2.0]  # Cost array corresponding to each feature
-population_size = 50
-num_selected_features = 2
+# 2. Drop the index column and extract feature names and target
+data = data.drop(columns=[0])
+num_cols = data.shape[1]
+column_names = ['y'] + [f'x{i}' for i in range(1, num_cols)]
+data.columns = column_names
+output_col = data.columns[0]
+input_cols = data.columns[1:].tolist()
 
-# 3. Initialize the optimizer
-# Available methods: 'DIST-EPS', 'MC', 'DIST-EPS-COST', 'MC-COST'
+# 3. Extract costs and remove that row from data
+costs = data.iloc[0].values[1:].tolist()
+data = data.drop(index=data.index[0])
+
+# 4. Normalize the input features (recommended)
+scaler = MinMaxScaler()
+scaled_features = scaler.fit_transform(data[input_cols])
+data_scaled = pd.DataFrame(scaled_features, columns=input_cols)
+data_scaled[output_col] = data[output_col].values
+
+# 5. Initialize the optimizer
+# Available methods: 'DIST-EPS', 'MC'
 optimizer = NSGA2_SVMFS(
     method="DIST-EPS",
-    data=data,
+    data=data_scaled,
     costs=costs,
-    population_size=population_size,
-    inputs=inputs,
-    output=output,
-    num_selected_features=num_selected_features,
+    population_size=10,
+    inputs=input_cols,
+    output=output_col,
+    num_selected_features=5,
     # Optional parameters with their default values:
     allow_clones=0,
     p_mutation=0.7,
@@ -66,11 +78,16 @@ optimizer = NSGA2_SVMFS(
     coord_mutation_type=0
 )
 
-# 4. Run the optimization
+# 6. Run the optimization
 # train mode can be 'sec' (seconds) or 'iter' (iterations)
-optimizer.run(train="iter", num_iter=20)
+optimizer.run(train="iter", num_iter=5)
 
-# 5. Visualize the Pareto front
+# 7. Get and save the Pareto front
+results = optimizer.population.solutions_df
+pareto_front = results[results.FRONT == 0]
+optimizer.save_results("09Colon_p", iteration_val=5, iteration_type="iter")
+
+# 8. Visualize the Pareto front
 optimizer.draw_solution()
 ```
 
