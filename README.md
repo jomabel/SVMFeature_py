@@ -116,7 +116,7 @@ Exports the current Pareto front to a CSV file.
 - `iteration_val`: Optional iteration value to include in the filename.
 - `iteration_type`: Optional iteration type (`'iter'` or `'sec'`) to include in the filename.
 
-## �️ Command Line (main.py)
+## Command Line (main.py)
 
 If you use the `main.py` script, these are the **default values** applied if flags are not provided:
 
@@ -139,7 +139,7 @@ If you use the `main.py` script, these are the **default values** applied if fla
 | `--p_mutate_coord` | `0.2` | Coordinate mutation probability. |
 | `--coord_mutation_type` | `0` | 0: Scaling, 1: Full replacement. |
 
-## �📱 Streamlit App
+## 📱 Streamlit App
 If you wish to run the interactive web application:
 ```bash
 streamlit run streamlit_app.py
