@@ -16,18 +16,18 @@ It is a metaheuristic that solves the **soft-margin Support Vector Machine (SVM)
 
 ## 📂 Project Structure
 
-Es fundamental distinguir que la **librería principal** es únicamente la carpeta `nsga2_svm_fs`. El resto de archivos son herramientas de apoyo, ejemplos o la aplicación web:
+It is fundamental to distinguish that the **main library** is solely the `nsga2_svm_fs` folder. The rest of the files are support tools, examples, or the web application:
 
-### 📗 Librería Core (`src/nsga2_svm_fs/`)
-Este es el **único** código que constituye el paquete `nsga2_svm_fs`. Es lo que se instala y lo único necesario para integrar el algoritmo en otros proyectos:
-- `nsga2_svmfs.py`: Clase principal `NSGA2_SVMFS`.
-- `population.py` y `solution.py`: Lógica del algoritmo NSGA-II.
+### 📗 Core Library (`src/nsga2_svm_fs/`)
+This is the **only** code that constitutes the `nsga2_svm_fs` package. This is what gets installed and the only part necessary to integrate the algorithm into other projects:
+- `nsga2_svmfs.py`: Main `NSGA2_SVMFS` class.
+- `population.py` and `solution.py`: NSGA-II algorithm logic.
 
-### 📱 Herramientas de Apoyo y Aplicación
-El resto del repositorio **no** forma parte de la librería core, pero es necesario para la demostración y ejemplos:
-- `streamlit_app.py` y `views/`: Dashboard interactivo (requieren la librería para funcionar).
-- `src/utils/visualization.py`: Generación de gráficos para la dashboard.
-- `main.py` y `example_usage.py`: Scripts de ejemplo para ejecución por terminal o código.
+### 📱 Support Tools and Application
+The rest of the repository is **not** part of the core library, but is necessary for the demonstration and examples:
+- `streamlit_app.py` and `views/`: Interactive dashboard (requires the library to function).
+- `src/utils/visualization.py`: Visualization generation for the dashboard.
+- `main.py` and `example_usage.py`: Example scripts for terminal or code execution.
 
 ---
 
