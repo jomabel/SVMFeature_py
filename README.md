@@ -8,7 +8,7 @@ It is a metaheuristic that solves the **soft-margin Support Vector Machine (SVM)
 
 - ⚙️ NSGA-II based metaheuristic
 - 📈 Multi-objective optimization
-  - Classic SVM objectives: margin distance and epsilon
+  - Margin distance and epsilon
   - True Positives (TP) and False Positives (FP)
 - 🔍 Visualization of the Pareto front and classifier metrics
 - 🧬 Analysis of the most frequently selected features and vectors
