@@ -70,7 +70,7 @@ input_cols = data.columns[1:].tolist()
 
 # 3. Handle costs (first row in this dataset)
 costs = data.iloc[0].values[1:].tolist()
-data = data.drop(index=data.index[0])
+data = data.drop(index=data.index[0]).reset_index(drop=True)
 
 # 4. Normalize features
 scaler = MinMaxScaler()
