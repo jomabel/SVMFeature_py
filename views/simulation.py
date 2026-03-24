@@ -83,9 +83,9 @@ def show_simulation():
             p_mutate_coord = slider("Coordinate mutation probability", 0.0, 1.0, 0.2)
             coord_mutation_type = selectbox("Coordinate mutation type", [0, 1], index=0, help="0: Scaling, 1: Full replacement")
 
-        # === Run NSGA-II ===
+        # === Run svmfsmeta ===
         if button("▶️ Run simulation"):
-            with spinner("⏳ Running NSGA-II..."):
+            with spinner("⏳ Running svmfsmeta..."):
                 log_area = empty()
                 logs = []
 
