@@ -3,7 +3,7 @@ from views.simulation import show_simulation
 from views.results import show_results
 
 # App title
-title("🌱 NSGA-II for Feature Selection with SVM")
+title("🌱 Multiobjective SVM feature selection via metaheuristics")
 
 tab1, tab2 = tabs(["⚙️ Simulation", "📊 Results"])
 
