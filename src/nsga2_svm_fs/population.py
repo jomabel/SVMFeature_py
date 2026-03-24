@@ -531,7 +531,7 @@ class Population:
         child4.plane_coords = mother.plane_coords
         child4.vectors = [mother.vectors[0], father.vectors[1]]
 
-        # Evaluate the offspring solutions <- ¿EVALUAR?
+        # Evaluate the offspring solutions 
         child1.evaluate_solution(data, output, costs, inputs)
         child2.evaluate_solution(data, output, costs, inputs)
         child3.evaluate_solution(data, output, costs, inputs)
@@ -594,19 +594,6 @@ class Population:
         else:
             # If neither dominates, break the tie randomly
             return (child1, child2) if uniform(0, 1) < 0.5 else (child2, child1)
-
-    # def save_population(self, filepath):
-    #     """
-    #     Saves the current Population object to a file using pickle.
-    #
-    #     Parameters
-    #     ----------
-    #     filepath : str
-    #         The path to the file where the population will be saved.
-    #     """
-    #
-    #     with open(filepath, 'wb') as file:
-    #         dump(self, file)
 
     def calculate_crowding_distance(self, method: str, front_id: int):
         """
