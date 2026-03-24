@@ -531,7 +531,7 @@ class Population:
         child4.plane_coords = mother.plane_coords
         child4.vectors = [mother.vectors[0], father.vectors[1]]
 
-        # Evaluate the offspring solutions
+        # Evaluate the offspring solutions <- ¿EVALUAR?
         child1.evaluate_solution(data, output, costs, inputs)
         child2.evaluate_solution(data, output, costs, inputs)
         child3.evaluate_solution(data, output, costs, inputs)
