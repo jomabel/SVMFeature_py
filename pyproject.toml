@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nsga2_svm_fs"
+name = "svmfsmeta"
 version = "0.1.0"
-description = "NSGA-II for feature selection using SVM"
+description = "Multiobjective SVM feature selection via metaheuristics"
 readme = "README.md"
 authors = [
     { name = "José Manuel Martínez Belando"},
@@ -26,5 +26,5 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["nsga2_svm_fs*"]
+include = ["nsga2_svm_fs*"] <--- ¿Esto se cambia????
 
