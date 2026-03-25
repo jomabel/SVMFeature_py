@@ -1,9 +1,9 @@
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from nsga2_svm_fs import NSGA2_SVMFS
+from svm_fs_meta import SVMFsMeta
 
 # 1. Load the included dataset
-# Example with '09Colon_p.txt': no header, first column is target, first row has feature costs.
+# Example with '09Colon_p.txt': no header, first column is target.
 data = pd.read_csv("data/09Colon_p.txt", sep=";", header=None)
 
 # 2. Drop the index column and extract feature names and target
@@ -14,10 +14,6 @@ data.columns = column_names
 output_col = data.columns[0]
 input_cols = data.columns[1:].tolist()
 
-# 3. Extract costs and remove that row from data
-costs = data.iloc[0].values[1:].tolist()
-data = data.drop(index=data.index[0])
-
 # 4. Normalize the input features (recommended)
 scaler = MinMaxScaler()
 scaled_features = scaler.fit_transform(data[input_cols])
@@ -26,10 +22,9 @@ data_scaled[output_col] = data[output_col].values
 
 # 5. Initialize the optimizer
 # Available methods: 'DIST-EPS', 'MC'
-optimizer = NSGA2_SVMFS(
+optimizer = SVMFsMeta(
     method="DIST-EPS",
     data=data_scaled,
-    costs=costs,
     population_size=10,
     inputs=input_cols,
     output=output_col,

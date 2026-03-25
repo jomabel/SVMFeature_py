@@ -26,5 +26,5 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["nsga2_svm_fs*"] <--- ¿Esto se cambia????
+include = ["svm_fs_meta*"]
 

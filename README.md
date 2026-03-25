@@ -80,7 +80,6 @@ data[input_cols] = scaler.fit_transform(data[input_cols])
 optimizer = NSGA2_SVMFS(
     method="DIST-EPS", # Options: 'DIST-EPS', 'MC'
     data=data,
-    costs=costs,
     population_size=10,
     inputs=input_cols,
     output=output_col,

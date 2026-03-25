@@ -9,7 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class NSGA2_SVMFS:
+class SVMFsMeta:
     """
     NSGA-II based algorithm for simultaneous Support Vector Machine training and Feature Selection (SVM + FS).
 

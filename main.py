@@ -2,15 +2,14 @@ import sys
 import os
 import argparse
 from sklearn.preprocessing import MinMaxScaler
-from nsga2_svm_fs import NSGA2_SVMFS
+from svm_fs_meta import SVMFsMeta
 from pandas import read_csv, DataFrame
 
-def simulate(method, data_scaled, costs, population_size, input_cols, output_col, num_features, iter_type, iter_val, **kwargs):
+def simulate(method, data_scaled, population_size, input_cols, output_col, num_features, iter_type, iter_val, **kwargs):
     print(f"Running NSGA-II simulation with method: {method}, population size: {population_size}, number of features: {num_features}, iteration type: {iter_type}, and iteration value: {iter_val}")
-    algorithm = NSGA2_SVMFS(
+    algorithm = SVMFsMeta(
                     method=method,
                     data= data_scaled,
-                    costs=costs,
                     population_size=population_size,
                     inputs=input_cols,
                     output=output_col,
@@ -34,7 +33,6 @@ def main():
     parser.add_argument("dataset", nargs="?", help="Path to the dataset")
     parser.add_argument("--has_header", type=str, choices=['yes', 'no', 'y', 'n'], help="Does the file have a header? [yes/no]")
     parser.add_argument("--has_index", type=str, choices=['yes', 'no', 'y', 'n'], help="Does the file have an index? [yes/no]")
-    parser.add_argument("--has_costs", type=str, choices=['yes', 'no', 'y', 'n'], help="Does the file have costs? [yes/no]")
     parser.add_argument("--separator", type=str, help="Separator (e.g. ',' or ';')")
     parser.add_argument("--normalize", type=str, choices=['yes', 'no', 'y', 'n'], help="Normalize input features? [yes/no]")
     
@@ -79,8 +77,6 @@ def main():
 
     has_header = resolve_bool(args.has_header, "Does the file have a header?", False)
     has_index = resolve_bool(args.has_index, "Does the file have an index column?", True)
-    has_costs = resolve_bool(args.has_costs, "Does the file include a row with feature costs?", True)
-
     separator = args.separator
     if separator is None:
         if interactive:
@@ -108,12 +104,6 @@ def main():
             
         output_col = data.columns[0]
         input_cols = data.columns[1:].tolist()
-
-        if has_costs:
-            costs = data.iloc[0].values[1:].tolist()
-            data.drop(index=data.index[0], inplace=True)
-        else:
-            costs = [0.0] * len(input_cols)
 
         if normalize:
             scaler = MinMaxScaler()
@@ -195,7 +185,7 @@ def main():
     print(f"Algorithm configuration successful.")
     
     # Run the NSGA-II algorithm
-    algorithm, method_used = simulate(method, data_scaled, costs, population_size, input_cols, output_col, num_features, iter_type, iter_val, **kwargs)
+    algorithm, method_used = simulate(method, data_scaled, population_size, input_cols, output_col, num_features, iter_type, iter_val, **kwargs)
 
     dataset_name = os.path.splitext(os.path.basename(dataset))[0]
     if algorithm is not None:

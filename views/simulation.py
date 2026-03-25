@@ -1,6 +1,6 @@
 from sklearn.preprocessing import MinMaxScaler
 
-from src.nsga2_svm_fs.nsga2_svmfs import NSGA2_SVMFS
+from svm_fs_meta import SVMFsMeta
 from streamlit import header, file_uploader, checkbox, subheader, selectbox, number_input, radio, button, empty, \
     success, dataframe, error, stop, spinner, write, expander, slider
 from pandas import read_csv, DataFrame
@@ -85,7 +85,7 @@ def show_simulation():
                     logs.append(message)
                     log_area.text_area("📜 Execution log", value="\n".join(logs), height=200)
 
-                algorithm = NSGA2_SVMFS(
+                algorithm = SVMFsMeta(
                     method=method,
                     data=data_scaled,
                     population_size=population_size,

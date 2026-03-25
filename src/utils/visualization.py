@@ -14,14 +14,6 @@ def plot_pareto_front(df, method):
         'MC': {
             'x': 'MC_POS', 'y': 'MC_NEG', 'z': None,
             'xlabel': 'MC_POS', 'ylabel': 'MC_NEG', 'title': 'Pareto Front'
-        },
-        'DIST-EPS-COST': {
-            'x': 'DIST', 'y': 'EPS', 'z': 'COST',
-            'xlabel': 'DIST', 'ylabel': 'EPS', 'zlabel': 'COST', 'title': '3D Pareto Front'
-        },
-        'MC-COST': {
-            'x': 'MC_POS', 'y': 'MC_NEG', 'z': 'COST',
-            'xlabel': 'MC_POS', 'ylabel': 'MC_NEG', 'zlabel': 'COST', 'title': '3D Pareto Front'
         }
     }
 
