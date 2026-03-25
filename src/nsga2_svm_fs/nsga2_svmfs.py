@@ -16,11 +16,9 @@ class NSGA2_SVMFS:
     Parameters
     ----------
     method : str
-        The multi-objective optimization method ('DIST-EPS', 'MC', etc.).
+        The multi-objective optimization method ('DIST-EPS', 'MC').
     data : pandas.DataFrame
         The dataset to be used.
-    costs : pandas.Series or ndarray
-        The cost associated with each feature.
     population_size : int
         Number of individuals in the population.
     inputs : list
@@ -43,12 +41,11 @@ class NSGA2_SVMFS:
         Type of mutation to apply on the coordinates (default is 0).
     """
 
-    def __init__(self, method, data, costs, population_size, inputs, output, num_selected_features,
+    def __init__(self, method, data, population_size, inputs, output, num_selected_features,
                  allow_clones=0, p_mutation=0.7, p_mutate_individual=0.4,
                  p_mutate_feature=0.4, p_mutate_coord=0.2, coord_mutation_type=0, logger=None):
         self.method = method
         self.data = data
-        self.costs = costs
         self.inputs = inputs
         self.output = output
         self.population_size = population_size
@@ -77,7 +74,7 @@ class NSGA2_SVMFS:
         self.population = Population()
         self.population.generate_initial_population(
             self.population_size, self.data, self.inputs, self.output,
-            self.costs, self.num_selected_features, self.allow_clones, self.method
+            , self.num_selected_features, self.allow_clones, self.method
         )
         self.population.fnds(self.method)
         self._log(f"Initial population: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
@@ -103,7 +100,7 @@ class NSGA2_SVMFS:
         """
 
         self.population.create_new_population(
-            self.population_size, self.p_mutation, self.data, self.inputs, self.output, self.costs,
+            self.population_size, self.p_mutation, self.data, self.inputs, self.output,
             self.p_mutate_individual, self.p_mutate_feature, self.p_mutate_coord,
             self.coord_mutation_type, self.allow_clones, self.method
         )
@@ -131,14 +128,6 @@ class NSGA2_SVMFS:
             'MC': {
                 'x': 'MC_POS', 'y': 'MC_NEG', 'z': None,
                 'xlabel': 'MC_POS', 'ylabel': 'MC_NEG', 'title': 'Pareto Front'
-            },
-            'DIST-EPS-COST': {
-                'x': 'DIST', 'y': 'EPS', 'z': 'COST',
-                'xlabel': 'DIST', 'ylabel': 'EPS', 'zlabel': 'COST', 'title': '3D Pareto Front'
-            },
-            'MC-COST': {
-                'x': 'MC_POS', 'y': 'MC_NEG', 'z': 'COST',
-                'xlabel': 'MC_POS', 'ylabel': 'MC_NEG', 'zlabel': 'COST', 'title': '3D Pareto Front'
             }
         }
 

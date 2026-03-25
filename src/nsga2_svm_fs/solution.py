@@ -27,7 +27,7 @@ class Solution:
     plane_term_b : list
         Bias terms for the decision boundary in the SVM (if applicable).
     objective : list
-        A list of objective values: [distance, epsilon, cost, mc_pos, mc_neg].
+        A list of objective values: [distance, epsilon, mc_pos, mc_neg].
     dominates_list : list
         List of solution IDs that the current solution dominates.
     dominated_by_list : list
@@ -63,8 +63,8 @@ class Solution:
         self.plane_coords = []  # Coordinates in the decision plane
         self.plane_term_b = []  # Bias terms for decision boundaries
 
-        # Objectives: [distance, epsilon, cost, mc_pos, mc_neg]
-        self.objective = [0] * 5
+        # Objectives: [distance, epsilon, mc_pos, mc_neg]
+        self.objective = [0] * 4
 
         # Front and dominance information for sorting in evolutionary algorithms
         self.dominates_list = []
@@ -103,9 +103,8 @@ class Solution:
             "FEATURES": self.features,  # List of selected features for the solution
             "DIST": self.objective[0],  # Distance value of the solution
             "EPS": self.objective[1],  # Epsilon value of the solution
-            "COST": self.objective[2],  # Cost value of the solution
-            "MC_POS": self.objective[3],  # Positive margin for multi-class classification
-            "MC_NEG": self.objective[4],  # Negative margin for multi-class classification
+            "MC_POS": self.objective[2],  # Positive margin for multi-class classification
+            "MC_NEG": self.objective[3],  # Negative margin for multi-class classification
             "DOMINATES": self.dominates_list,  # List of solutions that this solution dominates
             "DOMINATED_BY": self.dominated_by_list,  # List of solutions that dominate this solution
             "NUM_DOMINATED_BY": self.num_dominated_by,  # Number of solutions that dominate this solution
@@ -194,7 +193,7 @@ class Solution:
         # Filter the dataset based on the selected features and vectors
         self.solution_data = data.loc[self.vectors, self.features]
 
-    def evaluate_solution(self, data, output, costs, inputs):
+    def evaluate_solution(self, data, output, inputs):
         """
         Evaluates the solution by computing its objective values.
 
@@ -204,8 +203,6 @@ class Solution:
             Full dataset.
         output : str
             Target column name.
-        costs : list
-            List of feature costs.
         inputs : list
             List of all possible input features.
 
@@ -220,7 +217,6 @@ class Solution:
         self.construct_planes(data)
         self.calculate_distance_objective()
         self.calculate_epsilon_objective(data, output)
-        self.calculate_cost_objective(costs, inputs)
 
         return 1
 
@@ -301,8 +297,8 @@ class Solution:
         """
         # Inicializar objetivos
         self.objective[1] = 0  # Epsilon
-        self.objective[3] = 0  # Falsos positivos
-        self.objective[4] = 0  # Falsos negativos
+        self.objective[2] = 0  # Falsos positivos
+        self.objective[3] = 0  # Falsos negativos
 
         # Norm del vector normal al plano
         norm_ = norm(self.plane_coords)
@@ -338,17 +334,17 @@ class Solution:
             #b_condition = b0 > b1
             if b_condition:
                 if class_ == -1 and distance > 0:
-                    self.objective[4] += 1
+                    self.objective[3] += 1
                     self.objective[1] += distance
                 elif class_ == 1 and distance < 0:
-                    self.objective[3] += 1
+                    self.objective[2] += 1
                     self.objective[1] += abs(distance)
             else:
                 if class_ == -1 and distance < 0:
-                    self.objective[4] += 1
+                    self.objective[3] += 1
                     self.objective[1] += abs(distance)
                 elif class_ == 1 and distance > 0:
-                    self.objective[3] += 1
+                    self.objective[2] += 1
                     self.objective[1] += distance
         
         # Calcular métricas de clasificación
@@ -363,19 +359,6 @@ class Solution:
         self.auc = roc_auc_score(y_true_auc, decision_scores)             
 
 
-    def calculate_cost_objective(self, costs, inputs):
-        """
-        Computes the total cost associated with the selected features.
-
-        Parameters
-        ----------
-        costs : list
-            Cost of each feature (aligned with `inputs`).
-        inputs : list
-            Complete list of available features.
-        """
-        self.objective[2] = sum(costs[inputs.index(f)] for f in self.features)
-
     def dominates_solution(self, other_solution, method):
         """
         Determines whether this solution dominates another based on the specified method.
@@ -385,7 +368,7 @@ class Solution:
         other_solution : Solution
             The solution to compare against.
         method : str
-            Dominance method: 'Dist-Eps', 'Dist-Eps-Cost', 'MC', or 'MC-Cost'.
+            Dominance method: 'Dist-Eps' or 'MC'.
 
         Returns
         -------
@@ -399,22 +382,10 @@ class Solution:
                     self.objective[0] >= other_solution.objective[0] and
                     self.objective[1] <= other_solution.objective[1]
             )
-        elif method == 'DIST-EPS-COST':
-            return (
-                    self.objective[0] >= other_solution.objective[0] and
-                    self.objective[1] <= other_solution.objective[1] and
-                    self.objective[2] <= other_solution.objective[2]
-            )
         elif method == 'MC':
             return (
-                    self.objective[3] <= other_solution.objective[3] and
-                    self.objective[4] <= other_solution.objective[4]
-            )
-        elif method == 'MC-COST':
-            return (
-                    self.objective[3] <= other_solution.objective[3] and
-                    self.objective[4] <= other_solution.objective[4] and
-                    self.objective[2] <= other_solution.objective[2]
+                    self.objective[2] <= other_solution.objective[2] and
+                    self.objective[3] <= other_solution.objective[3]
             )
         else:
             raise ValueError("Invalid method for dominance comparison.")
@@ -443,35 +414,13 @@ class Solution:
                 return 1
             else:
                 return 2
-        elif method == 'DIST-EPS-COST':
-            if (self.objective[0] == solution2.objective[0] and
-                self.objective[1] == solution2.objective[1] and
-                self.objective[2] == solution2.objective[2]):
-                return 0
-            elif (self.objective[0] >= solution2.objective[0] and
-                  self.objective[1] <= solution2.objective[1] and
-                  self.objective[2] <= solution2.objective[2]):
-                return 1
-            else:
-                return 2
         elif method == 'MC':
             
-            if (self.objective[3] == solution2.objective[3] and
-                self.objective[4] == solution2.objective[4]):
+            if (self.objective[2] == solution2.objective[2] and
+                self.objective[3] == solution2.objective[3]):
                 return 0
-            elif (self.objective[3] <= solution2.objective[3] and
-                  self.objective[4] <= solution2.objective[4]):
-                return 1
-            else:
-                return 2
-        elif method == 'MC-COST':
-            if (self.objective[3] == solution2.objective[3] and
-                self.objective[4] == solution2.objective[4] and
-                self.objective[2] == solution2.objective[2]):
-                return 0
-            elif (self.objective[3] <= solution2.objective[3] and
-                  self.objective[4] <= solution2.objective[4] and
-                  self.objective[2] <= solution2.objective[2]):
+            elif (self.objective[2] <= solution2.objective[2] and
+                  self.objective[3] <= solution2.objective[3]):
                 return 1
             else:
                 return 2

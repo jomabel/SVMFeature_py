@@ -54,7 +54,6 @@ class Population:
             data,
             inputs: list,
             output: str,
-            costs,
             num_selected_features: int,
             allow_clones: bool,
             method: str
@@ -76,8 +75,6 @@ class Population:
             Names of input (feature) columns.
         output : str
             Name of the target/output column.
-        costs : array-like
-            Cost associated with each feature (used in evaluation).
         num_selected_features : int
             Number of features to select in each solution.
         allow_clones : bool
@@ -95,7 +92,7 @@ class Population:
             solution = Solution(solution_id)
             solution.generate_random_solution(data, inputs, output, num_selected_features)
 
-            if solution.evaluate_solution(data, output, costs, inputs) != 1:
+            if solution.evaluate_solution(data, output, inputs) != 1:
                 continue
 
             if allow_clones or not self.check_clones(solution, method):
@@ -131,10 +128,10 @@ class Population:
                 eva_obj_b = evaluated_solution.objective[1]
 
             elif method == 'MC':
-                sol_obj_a = sol.objective[3]
-                sol_obj_b = sol.objective[4]
-                eva_obj_a = evaluated_solution.objective[3]
-                eva_obj_b = evaluated_solution.objective[4]
+                sol_obj_a = sol.objective[2]
+                sol_obj_b = sol.objective[3]
+                eva_obj_a = evaluated_solution.objective[2]
+                eva_obj_b = evaluated_solution.objective[3]
 
             else:
                 continue
@@ -223,7 +220,6 @@ class Population:
             data,
             inputs: list,
             output: str,
-            costs,
             p_mutate_individual: float,
             p_mutate_feature: float,
             p_mutate_coord: float,
@@ -251,8 +247,6 @@ class Population:
             List of input (feature) column names.
         output : str
             Target/output column name.
-        costs : array-like
-            Costs associated with each feature (used in evaluation).
         p_mutate_individual : float
             Probability of individual mutation occurring.
         p_mutate_feature : float
@@ -283,7 +277,7 @@ class Population:
                 mother = self.tournament_select_parent(population_size)
 
             # Perform crossover: create 4 offspring and keep the 2 best
-            offspring = self.crossover_solutions(father, mother, i, method, data, inputs, output, costs)
+            offspring = self.crossover_solutions(father, mother, i, method, data, inputs, output)
 
             # Mutate the offspring
             for child in offspring:
@@ -299,7 +293,7 @@ class Population:
                         output
                     )
                 # Ensure the solution is valid
-                while child.evaluate_solution(data, output, costs, inputs) == 0:
+                while child.evaluate_solution(data, output, inputs) == 0:
                     child.generate_random_solution()
 
                 attempts = 0
@@ -317,7 +311,7 @@ class Population:
 
                     # Ensure the solution is valid
                     validity_attempts = 0
-                    while (child.evaluate_solution(data, output, costs, inputs) == 0 and
+                    while (child.evaluate_solution(data, output, inputs) == 0 and
                            validity_attempts < max_attempts):
                         child.mutate_solution(
                             p_mutate_individual,
@@ -333,7 +327,7 @@ class Population:
                 
                 
                 # Lastly, check if the child is valid and not a clone
-                if allow_clones == 0 and self.check_clones(child, method) == 0 and child.evaluate_solution(data, output, costs, inputs) != 0:
+                if allow_clones == 0 and self.check_clones(child, method) == 0 and child.evaluate_solution(data, output, inputs) != 0:
                     # Add valid child to the population
                     self.solutions.append(child)
                     i = len(self.solutions)
@@ -360,7 +354,7 @@ class Population:
             The desired population size after reduction.
         method : str
             The method to use for calculating the crowding distance. Options are:
-            "DIST-EPS", "DIST-EPS-COST", "MC", "MC-COST".
+            "DIST-EPS", "MC".
 
         Returns
         -------
@@ -474,7 +468,7 @@ class Population:
         return None
 
     def crossover_solutions(self, father: Solution, mother: Solution, solution_id: int, method: str,
-                            data, inputs: list, output: str, costs):
+                            data, inputs: list, output: str):
         """
         Performs crossover between two parent solutions (father and mother) to create offspring.
 
@@ -497,8 +491,6 @@ class Population:
             The input data to evaluate the solutions.
         output : str
             The output label for evaluation.
-        costs :
-            The costs associated with evaluating the solutions.
 
         Returns
         -------
@@ -532,10 +524,10 @@ class Population:
         child4.vectors = [mother.vectors[0], father.vectors[1]]
 
         # Evaluate the offspring solutions 
-        child1.evaluate_solution(data, output, costs, inputs)
-        child2.evaluate_solution(data, output, costs, inputs)
-        child3.evaluate_solution(data, output, costs, inputs)
-        child4.evaluate_solution(data, output, costs, inputs)
+        child1.evaluate_solution(data, output, inputs)
+        child2.evaluate_solution(data, output, inputs)
+        child3.evaluate_solution(data, output, inputs)
+        child4.evaluate_solution(data, output, inputs)
 
 
         # First round of comparison
@@ -573,8 +565,7 @@ class Population:
         child2 : Solution
             The second offspring to compare.
         method : str
-            The method to use for calculating dominance. This typically involves comparing multiple objectives
-            (e.g., cost, efficiency, etc.) depending on the method.
+            The multi-objective optimization method ('DIST-EPS', 'MC').
 
         Returns
         -------
@@ -607,9 +598,7 @@ class Population:
         method : str
             The method to use for determining which objectives to consider. Options are:
             - "DIST-EPS" for distance and epsilon
-            - "DIST-EPS-COST" for distance, epsilon, and cost
             - "MC" for MC+ and MC-
-            - "MC-COST" for cost, MC+, and MC-
         front_id : int
             The index of the Pareto front for which to compute crowding distance.
 
@@ -632,14 +621,8 @@ class Population:
             sol.crowding_distance = 0
 
         # Determine the number of objectives based on the selected method
-        if method == "DIST-EPS":
+        if method == "DIST-EPS" or method == "MC" :
             num_obj = 2
-        elif method == "DIST-EPS-COST":
-            num_obj = 3
-        elif method == "MC":
-            num_obj = 2
-        elif method == "MC-COST":
-            num_obj = 3
         else:
             raise ValueError(f"Method '{method}' is not recognized.")
 
@@ -647,12 +630,8 @@ class Population:
         def get_objectives(solution, method_):
             if method_ == "DIST-EPS":
                 return [solution.objective[0], solution.objective[1]]  # [DIST, EPS]
-            elif method_ == "DIST-EPS-COST":
-                return [solution.objective[0], solution.objective[1], solution.objective[2]]  # [DIST, EPS, COST]
             elif method_ == "MC":
-                return [solution.objective[3], solution.objective[4]]  # [MC+, MC-]
-            elif method_ == "MC-COST":
-                return [solution.objective[2], solution.objective[3], solution.objective[4]]  # [COST, MC+, MC-]
+                return [solution.objective[2], solution.objective[3]]  # [MC+, MC-]
             else:
                 raise ValueError(f"Method '{method_}' is not recognized.")
 

@@ -22,7 +22,6 @@ def show_simulation():
         ("⚙️ CSV Read Options")
         has_header = checkbox("Does the file have a header?", value=False)
         has_index = checkbox("Does the file have an index column?", value=True)
-        has_costs = checkbox("Does the file include a row with feature costs?", value=True)
         separator = selectbox("Select separator", [",", ";", "\t"], index=1)
         normalize = checkbox("📏 Normalize input features?", value=True)
 
@@ -44,13 +43,6 @@ def show_simulation():
 
             output_col = data.columns[0]
             input_cols = data.columns[1:].tolist()
-
-            if has_costs:
-                costs = data.iloc[0].values[1:].tolist()
-                data.drop(index=data.index[0], inplace=True)
-            else:
-                costs = [0.0] * len(input_cols)
-                dominance_methods = [method for method in dominance_methods if "COST" not in method]
 
             if normalize:
                 scaler = MinMaxScaler()
@@ -96,7 +88,6 @@ def show_simulation():
                 algorithm = NSGA2_SVMFS(
                     method=method,
                     data=data_scaled,
-                    costs=costs,
                     population_size=population_size,
                     inputs=input_cols,
                     output=output_col,

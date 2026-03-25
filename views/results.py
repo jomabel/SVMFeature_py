@@ -28,7 +28,7 @@ def show_results(algorithm,method):
 
     subheader("📊 Most Common Features and Vectors in Pareto Front")
 
-    metrics_cols = ['SOL', 'ACCURACY', 'F1', 'KAPPA', 'AUC', 'COST']
+    metrics_cols = ['SOL', 'ACCURACY', 'F1', 'KAPPA', 'AUC']
 
     subheader("📊 Metrics of solutions")
 

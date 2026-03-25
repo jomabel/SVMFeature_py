@@ -6,7 +6,7 @@ from nsga2_svm_fs import NSGA2_SVMFS
 from pandas import read_csv, DataFrame
 
 def simulate(method, data_scaled, costs, population_size, input_cols, output_col, num_features, iter_type, iter_val, **kwargs):
-    print(f"🚀 Running NSGA-II simulation with method: {method}, population size: {population_size}, number of features: {num_features}, iteration type: {iter_type}, and iteration value: {iter_val}")
+    print(f"Running NSGA-II simulation with method: {method}, population size: {population_size}, number of features: {num_features}, iteration type: {iter_type}, and iteration value: {iter_val}")
     algorithm = NSGA2_SVMFS(
                     method=method,
                     data= data_scaled,
@@ -59,9 +59,9 @@ def main():
     dataset = args.dataset
     if not dataset:
         if interactive:
-            dataset = input("📂 Dataset path: ").strip()
+            dataset = input("Dataset path: ").strip()
             if not dataset:
-                print(f"❌ No dataset provided. You can download the dataset included in the GitHub repository: {DEFAULT_DATA_URL}")
+                print(f"No dataset provided. You can download the dataset included in the GitHub repository: {DEFAULT_DATA_URL}")
                 sys.exit(1)
         else:
             parser.print_help()
@@ -123,20 +123,20 @@ def main():
         else:
             data_scaled = data.copy()
 
-        print(f"✅ File loaded successfully.")
+        print(f"File loaded successfully.")
 
     except Exception as e:
-        print(f"❌ Error while loading the data: {e}")
+        print(f"Error while loading the data: {e}")
         sys.exit(1)
 
     # Algorithm configuration
     if interactive:
-        print("⚙️ ALGORITHM CONFIGURATION")
+        print("ALGORITHM CONFIGURATION")
 
     method = args.method
     if method is None:
         if interactive:
-            print(f"⚙️ Available dominance methods: {', '.join(dominance_methods)}")
+            print(f"Available dominance methods: {', '.join(dominance_methods)}")
             method = input("Select dominance method: ").strip().upper()
             if method not in dominance_methods:
                 print("Invalid method. Using default: DIST-EPS")
@@ -159,7 +159,7 @@ def main():
         if interactive:
             try:
                 max_features = len(input_cols)
-                num_features = int(input(f"🔢 Number of features to select [1-{max_features}, default: 5]: ") or 5)
+                num_features = int(input(f"Number of features to select [1-{max_features}, default: 5]: ") or 5)
             except ValueError:
                 num_features = 5
         else:
@@ -168,7 +168,7 @@ def main():
     iter_type = args.iter_type
     if iter_type is None:
         if interactive:
-            iter_type = input("⏱ Training mode (iter/sec) [default: iter]: ").strip().lower() or "iter"
+            iter_type = input("Training mode (iter/sec) [default: iter]: ").strip().lower() or "iter"
             if iter_type not in ["iter", "sec"]:
                 iter_type = "iter"
         else:
@@ -192,14 +192,14 @@ def main():
     if args.p_mutate_coord is not None: kwargs['p_mutate_coord'] = args.p_mutate_coord
     if args.coord_mutation_type is not None: kwargs['coord_mutation_type'] = args.coord_mutation_type
 
-    print(f"✅ Algorithm configuration successful.")
+    print(f"Algorithm configuration successful.")
     
     # Run the NSGA-II algorithm
     algorithm, method_used = simulate(method, data_scaled, costs, population_size, input_cols, output_col, num_features, iter_type, iter_val, **kwargs)
 
     dataset_name = os.path.splitext(os.path.basename(dataset))[0]
     if algorithm is not None:
-        print(f"📘 Results will be saved in the 'results' directory under '{dataset_name}/{method_used}/'.")
+        print(f"Results will be saved in the 'results' directory under '{dataset_name}/{method_used}/'.")
         algorithm.save_results(dataset_name, iteration_val=iter_val, iteration_type=iter_type)
 
 if __name__ == "__main__":
