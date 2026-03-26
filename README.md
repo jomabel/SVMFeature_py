@@ -1,4 +1,4 @@
-# 🧠 NSGA2-Multi-objective SVM Classifier with Feature Selection
+# 🧠 SVMFsMeta
 
 This project implements the algorithms proposed by Valero et al. (2023) [https://doi.org/10.1016/j.cor.2022.106131] and Alcaraz, J. (2024) [https://doi.org/10.1016/j.cor.2024.106821].
 
@@ -16,11 +16,11 @@ It is a metaheuristic that solves the **soft-margin Support Vector Machine (SVM)
 
 ## 📂 Project Structure
 
-It is fundamental to distinguish that the **main library** is solely the `nsga2_svm_fs` folder. The rest of the files are support tools, examples, or the web application:
+It is fundamental to distinguish that the **main library** is solely the `svm_fs_meta` folder. The rest of the files are support tools, examples, or the web application:
 
-### 📗 Core Library (`src/nsga2_svm_fs/`)
-This is the **only** code that constitutes the `nsga2_svm_fs` package. This is what gets installed and the only part necessary to integrate the algorithm into other projects:
-- `nsga2_svmfs.py`: Main `NSGA2_SVMFS` class.
+### 📗 Core Library (`src/svm_fs_meta/`)
+This is the **only** code that constitutes the `svm_fs_meta` package. This is what gets installed and the only part necessary to integrate the algorithm into other projects:
+- `svm_fs_meta.py`: Main `SVMFsMeta` class.
 - `population.py` and `solution.py`: NSGA-II algorithm logic.
 
 ### 📱 Support Tools and Application
@@ -54,10 +54,10 @@ The library can be used programmatically (see `example_usage.py`) or via the com
 ```python
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from nsga2_svm_fs import NSGA2_SVMFS
+from svm_fs_meta import SVMFsMeta
 
 # 1. Load the included dataset
-# Example with '09Colon_p.txt': no header, first column is target, first row has feature costs.
+# Example with '09Colon_p.txt': no header, first column is target
 data = pd.read_csv("data/09Colon_p.txt", sep=";", header=None)
 
 # 2. Preprocess: drop index, define columns
@@ -68,16 +68,12 @@ data.columns = ['y'] + [f'x{i}' for i in range(1, num_cols)]
 output_col = data.columns[0]
 input_cols = data.columns[1:].tolist()
 
-# 3. Handle costs (first row in this dataset)
-costs = data.iloc[0].values[1:].tolist()
-data = data.drop(index=data.index[0]).reset_index(drop=True)
-
 # 4. Normalize features
 scaler = MinMaxScaler()
 data[input_cols] = scaler.fit_transform(data[input_cols])
 
 # 5. Initialize and run the optimizer
-optimizer = NSGA2_SVMFS(
+optimizer = SVMFsMeta(
     method="DIST-EPS", # Options: 'DIST-EPS', 'MC'
     data=data,
     population_size=10,
@@ -95,7 +91,7 @@ optimizer.draw_solution()
 
 ## 🛠️ API Reference
 
-### `NSGA2_SVMFS` (Class)
+### `SVMFsMeta` (Class)
 
 The main class to initialize and run the optimization.
 
@@ -104,7 +100,6 @@ The main class to initialize and run the optimization.
 | :--- | :--- | :--- | :--- |
 | `method` | `str` | - | Dominance method: `'DIST-EPS'` (Distance-Epsilon) or `'MC'` (Misclassification). |
 | `data` | `pd.DataFrame`| - | The dataset containing features and target column. |
-| `costs` | `list` | - | List of costs associated with each feature. |
 | `population_size`| `int` | - | Size of the population. |
 | `inputs` | `list` | - | Names of the input feature columns. |
 | `output` | `str` | - | Name of the target column. |
@@ -145,7 +140,6 @@ If you use the `main.py` script, these are the **default values** applied if fla
 | `--iter_val` | `5` | Iterations or seconds value. |
 | `--has_header` | `"no"` | Dataset includes header. |
 | `--has_index` | `"yes"` | Dataset includes index column. |
-| `--has_costs` | `"yes"` | Dataset includes costs row. |
 | `--separator` | `","` | CSV separator character. |
 | `--normalize` | `"yes"` | Normalize input features. |
 | `--allow_clones` | `0` | Allow duplicate individuals. |

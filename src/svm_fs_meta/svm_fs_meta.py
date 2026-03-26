@@ -74,7 +74,7 @@ class SVMFsMeta:
         self.population = Population()
         self.population.generate_initial_population(
             self.population_size, self.data, self.inputs, self.output,
-            , self.num_selected_features, self.allow_clones, self.method
+            self.num_selected_features, self.allow_clones, self.method
         )
         self.population.fnds(self.method)
         self._log(f"Initial population: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
