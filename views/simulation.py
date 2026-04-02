@@ -1,6 +1,6 @@
 from sklearn.preprocessing import MinMaxScaler
 
-from svm_fs_meta import SVMFsMeta
+from svmfsmeta import SVMFsMeta
 from streamlit import header, file_uploader, checkbox, subheader, selectbox, number_input, radio, button, empty, \
     success, dataframe, error, stop, spinner, write, expander, slider
 from pandas import read_csv, DataFrame

@@ -2,7 +2,7 @@ import sys
 import os
 import argparse
 from sklearn.preprocessing import MinMaxScaler
-from svm_fs_meta import SVMFsMeta
+from svmfsmeta import SVMFsMeta
 from pandas import read_csv, DataFrame
 
 def simulate(method, data_scaled, population_size, input_cols, output_col, num_features, iter_type, iter_val, **kwargs):
