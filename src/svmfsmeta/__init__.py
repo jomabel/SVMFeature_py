@@ -1,6 +1,6 @@
 import logging
 
-from .nsga2_svmfs import SVMFsMeta
+from .svm_fs_meta import SVMFsMeta
 from .population import Population
 from .solution import Solution
 from .front import Front

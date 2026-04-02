@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from svm_fs_meta import SVMFsMeta
+from svmfsmeta import SVMFsMeta
 
 # 1. Load the included dataset
 # Example with '09Colon_p.txt': no header, first column is target.
@@ -13,7 +13,7 @@ column_names = ['y'] + [f'x{i}' for i in range(1, num_cols)]
 data.columns = column_names
 output_col = data.columns[0]
 input_cols = data.columns[1:].tolist()
-
+data = data.drop(index=data.index[0])
 # 4. Normalize the input features (recommended)
 scaler = MinMaxScaler()
 scaled_features = scaler.fit_transform(data[input_cols])

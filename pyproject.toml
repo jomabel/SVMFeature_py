@@ -26,5 +26,5 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["svm_fs_meta*"]
+include = ["svmfsmeta*"]
 
