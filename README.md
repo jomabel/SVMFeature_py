@@ -9,17 +9,17 @@ It is a metaheuristic that solves the **soft-margin Support Vector Machine (SVM)
 - ⚙️ NSGA-II based metaheuristic
 - 📈 Multi-objective optimization
   - Margin distance and epsilon
-  - True Positives (TP) and False Positives (FP)
+  - False Positives (FP) and False Negatives (FN)
 - 🔍 Visualization of the Pareto front and classifier metrics
 - 🧬 Analysis of the most frequently selected features and vectors
 - 📤 Export of optimal solutions to CSV
 
 ## 📂 Project Structure
 
-It is fundamental to distinguish that the **main library** is solely the `svm_fs_meta` folder. The rest of the files are support tools, examples, or the web application:
+It is fundamental to distinguish that the **main library** is solely the `svmfsmeta` folder. The rest of the files are support tools, examples, or the web application:
 
-### 📗 Core Library (`src/svm_fs_meta/`)
-This is the **only** code that constitutes the `svm_fs_meta` package. This is what gets installed and the only part necessary to integrate the algorithm into other projects:
+### 📗 Core Library (`src/svmfsmeta/`)
+This is the **only** code that constitutes the `svmfsmeta` package. This is what gets installed and the only part necessary to integrate the algorithm into other projects:
 - `svm_fs_meta.py`: Main `SVMFsMeta` class.
 - `population.py` and `solution.py`: NSGA-II algorithm logic.
 
@@ -54,7 +54,7 @@ The library can be used programmatically (see `example_usage.py`) or via the com
 ```python
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from svm_fs_meta import SVMFsMeta
+from svmfsmeta import SVMFsMeta
 
 # 1. Load the included dataset
 # Example with '09Colon_p.txt': no header, first column is target
@@ -67,6 +67,10 @@ data.columns = ['y'] + [f'x{i}' for i in range(1, num_cols)]
 
 output_col = data.columns[0]
 input_cols = data.columns[1:].tolist()
+
+# 3. Filter binary classification labels (-1 and 1)
+data = data[data[output_col].isin([-1, 1])].copy()
+data.reset_index(drop=True, inplace=True)
 
 # 4. Normalize features
 scaler = MinMaxScaler()
@@ -112,9 +116,9 @@ The main class to initialize and run the optimization.
 | `coord_mutation_type` | `int` | `0` | Coordinate mutation type (0: Scaling, 1: Full replacement). |
 | `logger` | `fn` | `None` | Optional callback function for custom logging. |
 
-#### `run(train='iter', num_iter=10)`
+#### `run(train='sec', num_iter=10)`
 Starts the optimization process.
-- `train`: `'iter'` (iterations) or `'sec'` (seconds).
+- `train`: `'sec'` (seconds, default) or `'iter'` (iterations).
 - `num_iter`: Total number of iterations or seconds to run.
 
 #### `draw_solution()`

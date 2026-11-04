@@ -18,7 +18,7 @@ def simulate(method, data_scaled, population_size, input_cols, output_col, num_f
                 )
     
     algorithm.run(train=iter_type, num_iter=iter_val)
-    print(f"✅ NSGA-II simulation completed with method: {method}")
+    print(f"[OK] NSGA-II simulation completed with method: {method}")
 
     return algorithm, method
 
@@ -105,6 +105,10 @@ def main():
         output_col = data.columns[0]
         input_cols = data.columns[1:].tolist()
 
+        # Filtrar unicamente clases binarias (-1 y 1), descartando filas de costes si las hubiera
+        data = data[data[output_col].isin([-1, 1])].copy()
+        data.reset_index(drop=True, inplace=True)
+
         if normalize:
             scaler = MinMaxScaler()
             scaled_features = scaler.fit_transform(data[input_cols])
@@ -138,7 +142,7 @@ def main():
     if population_size is None:
         if interactive:
             try:
-                population_size = int(input("👥 Population size [5-100, default: 10]: ") or 10)
+                population_size = int(input("Population size [5-100, default: 10]: ") or 10)
             except ValueError:
                 population_size = 10
         else:
