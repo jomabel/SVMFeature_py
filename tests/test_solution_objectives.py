@@ -35,6 +35,27 @@ class TestClassificationObjectives(unittest.TestCase):
 
         self.assertEqual(solution.objective, [0, 5, 1, 1])
 
+    def test_equivalent_plane_orientations_give_identical_predictions(self):
+        data = pd.DataFrame({
+            "x": [2, 8, 4, 10],
+            "y": [-1, -1, 1, 1],
+        })
+        results = []
+
+        for weight, intercepts in ((1, [-2, -10, -6]), (-1, [2, 10, 6])):
+            solution = self.make_solution()
+            solution.plane_coords = [weight]
+            solution.plane_term_b = intercepts
+
+            solution.calculate_epsilon_objective(data, "y")
+            results.append(solution)
+
+        self.assertEqual(results[0].objective, [0, 12, 1, 1])
+        self.assertEqual(results[1].objective, results[0].objective)
+        self.assertEqual(results[1].conf_matrix.tolist(), results[0].conf_matrix.tolist())
+        self.assertEqual(results[1].accuracy, results[0].accuracy)
+        self.assertEqual(results[1].auc, results[0].auc)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -309,8 +309,9 @@ class Solution:
 
         # Usamos el plano medio como frontera de decisión
         b0, b1, b_mid = self.plane_term_b[0], self.plane_term_b[1], self.plane_term_b[2]
-        #Indicates if the plane for class -1 is above the plane for class 1
+        # Orient scores consistently so class 1 is positive for either normal direction.
         b_condition = b0 > b1
+        orientation = 1 if b_condition else -1
 
         y_true = []
         y_pred = []
@@ -326,7 +327,7 @@ class Solution:
             )
 
             # Función de decisión: f(x) = w·x + b
-            f_x = distance + b_mid
+            f_x = orientation * (distance + b_mid)
             pred = 1 if f_x >= 0 else -1
             y_pred.append(pred)
             decision_scores.append(f_x)
@@ -531,4 +532,3 @@ class Solution:
                     self.plane_coords[i] = coord
                 else:
                     self.plane_coords[i] = uniform(-1, 1)
-
