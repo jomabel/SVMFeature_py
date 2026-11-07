@@ -407,20 +407,28 @@ class Solution:
         bool
             True if this solution dominates the other one, False otherwise.
         """
-        
         if method == 'DIST-EPS':
-            
-            return (
-                    self.objective[0] >= other_solution.objective[0] and
-                    self.objective[1] <= other_solution.objective[1]
+            no_worse = (
+                self.objective[0] >= other_solution.objective[0] and
+                self.objective[1] <= other_solution.objective[1]
+            )
+            strictly_better = (
+                self.objective[0] > other_solution.objective[0] or
+                self.objective[1] < other_solution.objective[1]
             )
         elif method == 'MC':
-            return (
-                    self.objective[2] <= other_solution.objective[2] and
-                    self.objective[3] <= other_solution.objective[3]
+            no_worse = (
+                self.objective[2] <= other_solution.objective[2] and
+                self.objective[3] <= other_solution.objective[3]
+            )
+            strictly_better = (
+                self.objective[2] < other_solution.objective[2] or
+                self.objective[3] < other_solution.objective[3]
             )
         else:
             raise ValueError("Invalid method for dominance comparison.")
+
+        return no_worse and strictly_better
 
     def compare_dominance(self, solution2, method):
         """
@@ -436,26 +444,18 @@ class Solution:
         Returns
         -------
         int
-            0 if equal, 1 if this dominates, 2 if dominated.
+            0 if neither solution dominates the other, 1 if this solution
+            dominates, or 2 if solution2 dominates.
         """
 
-        if method == 'DIST-EPS':
-            if self.objective[0] == solution2.objective[0] and self.objective[1] == solution2.objective[1]:
-                return 0
-            elif self.objective[0] >= solution2.objective[0] and self.objective[1] <= solution2.objective[1]:
-                return 1
-            else:
-                return 2
-        elif method == 'MC':
-            
-            if (self.objective[2] == solution2.objective[2] and
-                self.objective[3] == solution2.objective[3]):
-                return 0
-            elif (self.objective[2] <= solution2.objective[2] and
-                  self.objective[3] <= solution2.objective[3]):
-                return 1
-            else:
-                return 2
+        if method not in ('DIST-EPS', 'MC'):
+            raise ValueError("Invalid method for dominance comparison.")
+
+        if self.dominates_solution(solution2, method):
+            return 1
+        if solution2.dominates_solution(self, method):
+            return 2
+        return 0
 
     def compare_solutions(self, solution):
         """
