@@ -1,99 +1,130 @@
-# 🧠 SVMFsMeta
+# SVM_FS_META
 
-This project implements the algorithms proposed by Valero et al. (2023) [https://doi.org/10.1016/j.cor.2022.106131] and Alcaraz, J. (2024) [https://doi.org/10.1016/j.cor.2024.106821].
+`svmfsmeta` is a Python library for binary soft-margin Support Vector Machine
+(SVM) classification with feature selection. It uses NSGA-II to search for a
+set of non-dominated classifiers, allowing users to choose a model according
+to their preferred trade-off between objectives.
 
-It is a metaheuristic that solves the **soft-margin Support Vector Machine (SVM)** problem when combined with **Feature Selection**. The result of the algorithm is a **Pareto front**, where each solution is an SVM-based classifier that helps decision-makers select the best model for their specific problem.
+The project is based on the methods described by Valero et al. (2023)
+[https://doi.org/10.1016/j.cor.2022.106131] and Alcaraz (2024)
+[https://doi.org/10.1016/j.cor.2024.106821].
 
-## 🚀 Key Features
+## Features
 
-- ⚙️ NSGA-II based metaheuristic
-- 📈 Multi-objective optimization
-  - Margin distance and epsilon
-  - False Positives (FP) and False Negatives (FN)
-- 🔍 Visualization of the Pareto front and classifier metrics
-- 🧬 Analysis of the most frequently selected features and vectors
-- 📤 Export of optimal solutions to CSV
+- NSGA-II optimization with either objective pair:
+  - `DIST-EPS`: maximize the distance between the two margin planes and
+    minimize the sum of margin-violation distances (epsilon).
+  - `MC`: minimize false negatives (FN) and false positives (FP) separately,
+    measured using the intermediate classification plane.
+- Classification metrics for each candidate, including accuracy, precision,
+  recall, F1, Cohen's kappa, AUC, and a confusion matrix.
+- Plotting and CSV export of the first non-dominated front.
 
-## 📂 Project Structure
+## Objective and classification conventions
 
-It is fundamental to distinguish that the **main library** is solely the `svmfsmeta` folder. The rest of the files are support tools, examples, or the web application:
+- Use numeric response labels `-1` and `1`; class `1` is the positive class.
+- Every candidate selects **exactly** `num_selected_features` predictors.
+- `DIST` is the normalized distance between the class-specific margin planes;
+  it is maximized. `EPS` is the sum of the class-specific margin-violation
+  distances; it is minimized.
+- `MC_POS` is the false-negative count (actual `1`, predicted `-1`), and
+  `MC_NEG` is the false-positive count (actual `-1`, predicted `1`). Both are
+  minimized. These names are retained for compatibility with the result
+  format.
+- Predictions use the intermediate plane. A decision score of zero is
+  predicted as class `1`. The same predictions are used for MC and the
+  classification metrics.
+- The confusion matrix has actual classes as rows and predicted classes as
+  columns, ordered `-1`, then `1`.
+- Front numbers start at zero: `FRONT == 0` is the first non-dominated front.
 
-### 📗 Core Library (`src/svmfsmeta/`)
-This is the **only** code that constitutes the `svmfsmeta` package. This is what gets installed and the only part necessary to integrate the algorithm into other projects:
-- `svm_fs_meta.py`: Main `SVMFsMeta` class.
-- `population.py` and `solution.py`: NSGA-II algorithm logic.
+## Project layout
 
-### 📱 Support Tools and Application
-The rest of the repository is **not** part of the core library, but is necessary for the demonstration and examples:
-- `streamlit_app.py` and `views/`: Interactive dashboard (requires the library to function).
-- `src/utils/visualization.py`: Visualization generation for the dashboard.
-- `main.py` and `example_usage.py`: Example scripts for terminal or code execution.
+The installable library is in `src/svmfsmeta/`:
+
+- `svm_fs_meta.py`: public `SVMFsMeta` optimizer interface.
+- `population.py`: population generation, NSGA-II ranking, and selection.
+- `solution.py`: candidate construction, objective evaluation, and metrics.
+
+The repository also contains `main.py` and `example_usage.py` examples, and a
+Streamlit application in `streamlit_app.py` and `views/`. These are support
+tools and are not required to use the core library.
 
 ---
 
 ## 📦 Installation
 
-To install the library locally using `pip`:
+Install the library and its runtime dependencies with:
 
 ```bash
 # Clone the repository
 git clone https://github.com/jomabel/SVMFeature_py.git
 cd SVMFeature_py
 
-# Install the package in editable mode for development, or just pip install .
+# Editable install for development; use `pip install .` for a regular install.
 pip install -e .
+```
 
-# Install dependencies for the Streamlit app
+The following installs additional repository dependencies used by the
+Streamlit application and development/documentation tools:
+
+```bash
 pip install -r requirements.txt
 ```
 
-## 💻 Basic Usage
+## Quick start
 
-The library can be used programmatically (see `example_usage.py`) or via the command line (see `main.py`).
+This example expects a semicolon-separated file with no header, an index in
+the first column, the class label in the next column, and predictors after it.
+Adapt the loading and preprocessing steps to your dataset.
 
 ```python
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from svmfsmeta import SVMFsMeta
 
-# 1. Load the included dataset
-# Example with '09Colon_p.txt': no header, first column is target
+# Load data and discard its stored index column.
 data = pd.read_csv("data/09Colon_p.txt", sep=";", header=None)
-
-# 2. Preprocess: drop index, define columns
 data = data.drop(columns=[0])
-num_cols = data.shape[1]
-data.columns = ['y'] + [f'x{i}' for i in range(1, num_cols)]
+data.columns = ["y"] + [f"x{i}" for i in range(1, data.shape[1])]
 
-output_col = data.columns[0]
-input_cols = data.columns[1:].tolist()
+output_col = "y"
+input_cols = data.columns.drop(output_col).tolist()
 
-# 3. Filter binary classification labels (-1 and 1)
-data = data[data[output_col].isin([-1, 1])].copy()
-data.reset_index(drop=True, inplace=True)
+# Keep the two supported classes and reset the row index.
+data = data[data[output_col].isin([-1, 1])].copy().reset_index(drop=True)
 
-# 4. Normalize features
+# Optional: scale predictors to [0, 1].
 scaler = MinMaxScaler()
 data[input_cols] = scaler.fit_transform(data[input_cols])
 
-# 5. Initialize and run the optimizer
 optimizer = SVMFsMeta(
-    method="DIST-EPS", # Options: 'DIST-EPS', 'MC'
+    method="DIST-EPS",  # "DIST-EPS" or "MC"
     data=data,
     population_size=10,
     inputs=input_cols,
     output=output_col,
-    num_selected_features=5
+    num_selected_features=5,
 )
 
+# Run a fixed number of generations.
 optimizer.run(train="iter", num_iter=20)
 
-# 6. Save and Visualize
-optimizer.save_results("09Colon_p", iteration_val=20, iteration_type="iter")
+# Inspect and save the first non-dominated front.
+pareto_front = optimizer.population.solutions_df
+pareto_front = pareto_front[pareto_front["FRONT"] == 0]
+optimizer.save_results(
+    "09Colon_p",
+    iteration_val=20,
+    iteration_type="iter",
+)
 optimizer.draw_solution()
 ```
 
-## 🛠️ API Reference
+Optimization is stochastic. Repeated runs are not guaranteed to produce the
+same population or Pareto front.
+
+## API reference
 
 ### `SVMFsMeta` (Class)
 
@@ -102,66 +133,94 @@ The main class to initialize and run the optimization.
 #### `__init__(...)`
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `method` | `str` | - | Dominance method: `'DIST-EPS'` (Distance-Epsilon) or `'MC'` (Misclassification). |
-| `data` | `pd.DataFrame`| - | The dataset containing features and target column. |
-| `population_size`| `int` | - | Size of the population. |
-| `inputs` | `list` | - | Names of the input feature columns. |
-| `output` | `str` | - | Name of the target column. |
-| `num_selected_features`| `int` | - | Maximum number of features to be selected. |
-| `allow_clones` | `int` | `0` | `0` or `1`. Whether to allow duplicated individuals in the population. |
-| `p_mutation` | `float` | `0.7` | Global mutation probability. |
+| `method` | `str` | Required | Objective pair: `"DIST-EPS"` or `"MC"`. |
+| `data` | `pd.DataFrame` | Required | Dataset containing the response and predictors. |
+| `population_size` | `int` | Required | Number of candidates in the population. |
+| `inputs` | `list[str]` | Required | Names of predictor columns. |
+| `output` | `str` | Required | Name of the response column. |
+| `num_selected_features` | `int` | Required | Exact number of predictors selected in each candidate. |
+| `allow_clones` | `int` | `0` | `0` forbids duplicate individuals; `1` allows them. |
+| `p_mutation` | `float` | `0.7` | Probability of applying mutation to offspring. |
 | `p_mutate_individual` | `float` | `0.4` | Probability of mutating an individual. |
-| `p_mutate_feature` | `float` | `0.4` | Probability of mutating a feature selection. |
-| `p_mutate_coord` | `float` | `0.2` | Probability of mutating a coordinate (hyperparameter). |
-| `coord_mutation_type` | `int` | `0` | Coordinate mutation type (0: Scaling, 1: Full replacement). |
-| `logger` | `fn` | `None` | Optional callback function for custom logging. |
+| `p_mutate_feature` | `float` | `0.4` | Probability of mutating selected features. |
+| `p_mutate_coord` | `float` | `0.2` | Probability of mutating plane coordinates. |
+| `coord_mutation_type` | `int` | `0` | `0` scales coordinates; `1` replaces them. |
+| `logger` | callback or logger | `None` | Optional custom logging callback or logger. |
 
-#### `run(train='sec', num_iter=10)`
-Starts the optimization process.
-- `train`: `'sec'` (seconds, default) or `'iter'` (iterations).
-- `num_iter`: Total number of iterations or seconds to run.
+Use numeric predictors and response labels `-1` and `1`; both classes should
+be present. Column names supplied in `inputs` and `output` must exist in the
+DataFrame.
 
-#### `draw_solution()`
-Generates a scatter plot of the Pareto front (Front 0).
+### `run(train="sec", num_iter=10)`
 
-#### `save_results(dataset_name, output_dir="results", iteration_val=None, iteration_type=None)`
-Exports the current Pareto front to a CSV file.
-- `dataset_name`: Name for the output subfolder.
-- `output_dir`: Root directory for results (default: `"results"`).
-- `iteration_val`: Optional iteration value to include in the filename.
-- `iteration_type`: Optional iteration type (`'iter'` or `'sec'`) to include in the filename.
+Generates the initial population and runs NSGA-II.
 
-## Command Line (main.py)
+- `train="iter"` runs for `num_iter` iterations.
+- `train="sec"` runs until the requested number of seconds has elapsed. The
+  limit is approximate: initialization happens first and an iteration already
+  underway is allowed to finish.
 
-If you use the `main.py` script, these are the **default values** applied if flags are not provided:
+The final population is available as `optimizer.population`. Its
+`solutions_df` table contains candidate summaries and their `FRONT` values.
+Filter `FRONT == 0` to obtain the first non-dominated front.
+
+### `draw_solution()`
+
+Plots the first non-dominated front for the selected objective pair.
+
+### `save_results(dataset_name, output_dir="results", iteration_val=None, iteration_type=None)`
+
+Writes the first non-dominated front to CSV under
+`<output_dir>/<dataset_name>/<method>/`. A numeric suffix is added if the
+target filename already exists.
+
+- `dataset_name`: directory name for the dataset.
+- `output_dir`: root output directory.
+- `iteration_val`: optional iteration count or time value included in the
+  filename.
+- `iteration_type`: optional `"iter"` or `"sec"` value included with
+  `iteration_val`.
+
+## Command-line interface
+
+Run `python main.py --help` for the available options. The script accepts a
+dataset path followed by optional flags:
+
+```bash
+python main.py path/to/data.csv --has_header no --has_index yes --separator "," --normalize yes --method DIST-EPS --population_size 10 --num_features 5 --iter_type iter --iter_val 5
+```
+
+The CLI expects the response in the first column after any optional index
+column is removed. It filters rows to labels `-1` and `1`; when normalization
+is enabled, it applies Min-Max scaling to the predictors.
 
 | Option | Default Value | Description |
 | :--- | :--- | :--- |
-| `--method` | `"DIST-EPS"` | Dominance method (`"DIST-EPS"`, `"MC"`). |
+| `--has_header` | `"no"` | Whether the input file has a header (`yes`/`no`). |
+| `--has_index` | `"yes"` | Whether to drop the first input column as an index. |
+| `--separator` | `","` | CSV field separator. |
+| `--normalize` | `"yes"` | Whether to Min-Max scale predictors. |
+| `--method` | `"DIST-EPS"` | Objective pair (`"DIST-EPS"` or `"MC"`). |
 | `--population_size` | `10` | Size of the population. |
-| `--num_features` | `5` | Features to be selected. |
+| `--num_features` | `5` | Exact number of predictors selected per candidate. |
 | `--iter_type` | `"iter"` | Training mode (`"iter"` or `"sec"`). |
-| `--iter_val` | `5` | Iterations or seconds value. |
-| `--has_header` | `"no"` | Dataset includes header. |
-| `--has_index` | `"yes"` | Dataset includes index column. |
-| `--separator` | `","` | CSV separator character. |
-| `--normalize` | `"yes"` | Normalize input features. |
-| `--allow_clones` | `0` | Allow duplicate individuals. |
+| `--iter_val` | `5` | Number of iterations or seconds, according to `--iter_type`. |
+| `--allow_clones` | `0` | `0` forbids clones; `1` allows them. |
 | `--p_mutation` | `0.7` | Global mutation probability. |
 | `--p_mutate_individual` | `0.4` | Individual mutation probability. |
 | `--p_mutate_feature` | `0.4` | Feature mutation probability. |
 | `--p_mutate_coord` | `0.2` | Coordinate mutation probability. |
-| `--coord_mutation_type` | `0` | 0: Scaling, 1: Full replacement. |
+| `--coord_mutation_type` | `0` | `0` scales coordinates; `1` replaces them. |
 
-## 📱 Streamlit App
+When run interactively, the CLI prompts for unspecified options. The defaults
+are the same as those listed above.
 
-The Streamlit app is a dashboard built **on top** of the library. To run it, you must have the full repository cloned (including the `views/` folder).
+## Streamlit application
 
-1. **Install requirements**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-2. **Launch the app**:
-   ```bash
-   streamlit run streamlit_app.py
-   ```
+The dashboard requires the full repository. Install the additional
+requirements and launch it from the project directory:
+
+```bash
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
