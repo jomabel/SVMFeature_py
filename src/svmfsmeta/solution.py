@@ -103,8 +103,8 @@ class Solution:
             "FEATURES": self.features,  # List of selected features for the solution
             "DIST": self.objective[0],  # Distance value of the solution
             "EPS": self.objective[1],  # Epsilon value of the solution
-            "MC_POS": self.objective[2],  # Positive margin for multi-class classification
-            "MC_NEG": self.objective[3],  # Negative margin for multi-class classification
+            "MC_POS": self.objective[2],  # False negatives
+            "MC_NEG": self.objective[3],  # False positives
             "DOMINATES": self.dominates_list,  # List of solutions that this solution dominates
             "DOMINATED_BY": self.dominated_by_list,  # List of solutions that dominate this solution
             "NUM_DOMINATED_BY": self.num_dominated_by,  # Number of solutions that dominate this solution
@@ -286,7 +286,7 @@ class Solution:
 
     def calculate_epsilon_objective(self, data, output):
         """
-        Calculates the epsilon objective, which measures the number of misclassified points.
+        Calculates epsilon and the false-negative/false-positive objectives.
 
         Parameters
         ----------
@@ -294,11 +294,15 @@ class Solution:
             Full dataset.
         output : str
             Name of the output column.
+
+        Epsilon is the sum of class-specific margin violations. MC objectives
+        are classification errors measured at the intermediate plane: false
+        negatives are stored in objective[2] and false positives in objective[3].
         """
         # Inicializar objetivos
         self.objective[1] = 0  # Epsilon
-        self.objective[2] = 0  # Falsos positivos
-        self.objective[3] = 0  # Falsos negativos
+        self.objective[2] = 0  # Falsos negativos
+        self.objective[3] = 0  # Falsos positivos
 
         # Norm del vector normal al plano
         norm_ = norm(self.plane_coords)
@@ -334,21 +338,19 @@ class Solution:
             #b_condition = b0 > b1
             if b_condition:
                 if class_ == -1 and distance > 0:
-                    self.objective[3] += 1
                     self.objective[1] += distance
                 elif class_ == 1 and distance < 0:
-                    self.objective[2] += 1
                     self.objective[1] += abs(distance)
             else:
                 if class_ == -1 and distance < 0:
-                    self.objective[3] += 1
                     self.objective[1] += abs(distance)
                 elif class_ == 1 and distance > 0:
-                    self.objective[2] += 1
                     self.objective[1] += distance
         
         # Calcular métricas de clasificación
         self.conf_matrix = confusion_matrix(y_true, y_pred, labels=[-1, 1])
+        self.objective[2] = int(self.conf_matrix[1, 0])  # FN: class 1 predicted as -1
+        self.objective[3] = int(self.conf_matrix[0, 1])  # FP: class -1 predicted as 1
         self.accuracy = accuracy_score(y_true, y_pred)
         self.precision = precision_score(y_true, y_pred, zero_division=0, pos_label=1)
         self.recall = recall_score(y_true, y_pred, zero_division=0, pos_label=1)
@@ -529,5 +531,4 @@ class Solution:
                     self.plane_coords[i] = coord
                 else:
                     self.plane_coords[i] = uniform(-1, 1)
-
 
