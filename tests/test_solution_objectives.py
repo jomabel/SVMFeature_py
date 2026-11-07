@@ -56,6 +56,49 @@ class TestClassificationObjectives(unittest.TestCase):
         self.assertEqual(results[1].accuracy, results[0].accuracy)
         self.assertEqual(results[1].auc, results[0].auc)
 
+    def test_zero_sum_nonzero_normal_is_valid(self):
+        data = pd.DataFrame({
+            "x1": [-1, 1],
+            "x2": [0, 0],
+            "y": [-1, 1],
+        })
+        solution = Solution(solution_id=1)
+        solution.features = ["x1", "x2"]
+        solution.vectors = [0, 1]
+        solution.plane_coords = [1, -1]
+
+        result = solution.evaluate_solution(data, "y", ["x1", "x2"])
+
+        self.assertEqual(result, 1)
+        self.assertAlmostEqual(solution.objective[0], 2 ** 0.5)
+        self.assertEqual(solution.objective[1:], [0, 0, 0])
+
+    def test_zero_normal_is_invalid(self):
+        data = pd.DataFrame({
+            "x1": [-1, 1],
+            "x2": [0, 0],
+            "y": [-1, 1],
+        })
+        solution = Solution(solution_id=1)
+        solution.features = ["x1", "x2"]
+        solution.vectors = [0, 1]
+        solution.plane_coords = [0, 0]
+
+        self.assertEqual(solution.evaluate_solution(data, "y", ["x1", "x2"]), 0)
+
+    def test_coincident_margin_planes_are_invalid(self):
+        data = pd.DataFrame({
+            "x1": [0, 0],
+            "x2": [-1, 1],
+            "y": [-1, 1],
+        })
+        solution = Solution(solution_id=1)
+        solution.features = ["x1", "x2"]
+        solution.vectors = [0, 1]
+        solution.plane_coords = [1, 0]
+
+        self.assertEqual(solution.evaluate_solution(data, "y", ["x1", "x2"]), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

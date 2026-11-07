@@ -1,4 +1,7 @@
+from math import isfinite
+from numbers import Real
 from random import uniform, randint, sample, choice
+from sys import float_info
 from numpy import dot, mean, sign
 from numpy.linalg import norm
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score, \
@@ -211,10 +214,36 @@ class Solution:
         int
             1 if evaluation succeeded, 0 if the solution is invalid.
         """
-        if sum(self.plane_coords) == 0:
+        if (
+            not isinstance(self.plane_coords, (list, tuple)) or
+            len(self.plane_coords) != len(self.features) or
+            not self.plane_coords or
+            not all(
+                isinstance(coord, Real) and not isinstance(coord, bool) and isfinite(coord)
+                for coord in self.plane_coords
+            )
+        ):
+            return 0
+
+        normal_norm = norm(self.plane_coords)
+        if not isfinite(normal_norm) or normal_norm <= 0:
             return 0
 
         self.construct_planes(data)
+        if (
+            len(self.plane_term_b) != 3 or
+            not all(isfinite(intercept) for intercept in self.plane_term_b)
+        ):
+            return 0
+
+        margin_gap = abs(self.plane_term_b[0] - self.plane_term_b[1])
+        margin_tolerance = (
+            2 * float_info.epsilon *
+            max(abs(self.plane_term_b[0]), abs(self.plane_term_b[1]))
+        )
+        if not isfinite(margin_gap) or margin_gap <= margin_tolerance:
+            return 0
+
         self.calculate_distance_objective()
         self.calculate_epsilon_objective(data, output)
 
