@@ -24,7 +24,7 @@ class Solution:
     features : list
         List of selected features for the solution.
     vectors : list
-        List of vectors related to the solution's representation.
+        Index labels of the selected observations, one per class.
     plane_coords : list
         Coordinates of the solution in the decision space.
     plane_term_b : list
@@ -62,7 +62,7 @@ class Solution:
         self.solution_id = solution_id
         self.solution_data = None
         self.features = []  # List to hold selected features
-        self.vectors = []  # List to hold vectors for solution representation
+        self.vectors = []  # Index labels of the selected class observations
         self.plane_coords = []  # Coordinates in the decision plane
         self.plane_term_b = []  # Bias terms for decision boundaries
 
@@ -261,8 +261,8 @@ class Solution:
             Full dataset.
         """
 
-        # Select the relevant rows and columns in a single operation
-        self.solution_data = data.iloc[self.vectors][self.features]
+        # Retrieve anchor rows by the index labels stored in vectors.
+        self.solution_data = data.loc[self.vectors, self.features]
 
         # Initialize the bias terms for the planes
         self.plane_term_b = []
@@ -279,7 +279,7 @@ class Solution:
     @staticmethod
     def get_class_vector(class_, data, output):
         """
-        Randomly selects one sample index corresponding to a class.
+        Randomly selects one sample's index label corresponding to a class.
 
         Parameters
         ----------
@@ -292,8 +292,9 @@ class Solution:
 
         Returns
         -------
-        int
-            Index of a randomly selected instance from the specified class.
+        object
+            Original DataFrame index label of a randomly selected instance
+            from the specified class.
         """
         vector = sample(data.loc[data[output] == class_].index.tolist(), 1)[0]
         return vector
