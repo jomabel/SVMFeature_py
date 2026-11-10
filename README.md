@@ -65,6 +65,22 @@ cd SVMFeature_py
 pip install -e .
 ```
 
+To run the Colon examples, install the optional dependencies (Python 3.10 or later):
+
+```bash
+python -m pip install -e ".[examples]"
+```
+
+Run Colon from the repository directory:
+
+```bash
+python main.py colon --method DIST-EPS --iter_type iter --iter_val 5
+```
+
+`main.py` uses Colon when no dataset argument is supplied. You can still pass a
+CSV file path instead. Colon is downloaded from `plsgenomics` version `1.5-3`
+and cached on first use; R does not need to be installed.
+
 The following installs additional repository dependencies used by the
 Streamlit application and development/documentation tools:
 
@@ -74,25 +90,26 @@ pip install -r requirements.txt
 
 ## Quick start
 
-This example expects a semicolon-separated file with no header, an index in
-the first column, the class label in the next column, and predictors after it.
-Adapt the loading and preprocessing steps to your dataset.
+This example loads the same `Colon` dataset as the R package: 62 samples and
+2,000 predictors. Original class 1 (normal tissue) remains 1, and class 2
+(tumor tissue) becomes -1.
 
 ```python
+import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from skdatasets.repositories.cran import fetch_dataset
 from svmfsmeta import SVMFsMeta
 
-# Load data and discard its stored index column.
-data = pd.read_csv("data/09Colon_p.txt", sep=";", header=None)
-data = data.drop(columns=[0])
-data.columns = ["y"] + [f"x{i}" for i in range(1, data.shape[1])]
+# Load Colon from the same version of plsgenomics used by the example in R.
+colon = fetch_dataset("Colon", "plsgenomics", version="1.5-3")["Colon"]
+X = np.asarray(colon["X"], dtype=float)
+y = np.where(np.asarray(colon["Y"]).reshape(-1) == 2, -1, 1)
+data = pd.DataFrame(X, columns=[f"x{i}" for i in range(1, X.shape[1] + 1)])
+data.insert(0, "y", y)
 
 output_col = "y"
 input_cols = data.columns.drop(output_col).tolist()
-
-# Keep the two supported classes and reset the row index.
-data = data[data[output_col].isin([-1, 1])].copy().reset_index(drop=True)
 
 # Optional: scale predictors to [0, 1].
 scaler = MinMaxScaler()
@@ -114,7 +131,7 @@ optimizer.run(train="iter", num_iter=20)
 pareto_front = optimizer.population.solutions_df
 pareto_front = pareto_front[pareto_front["FRONT"] == 0]
 optimizer.save_results(
-    "09Colon_p",
+    "colon",
     iteration_val=20,
     iteration_type="iter",
 )

@@ -1,9 +1,12 @@
 import sys
 import os
 import argparse
+import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-from svmfsmeta import SVMFsMeta
 from pandas import read_csv, DataFrame
+
+from src.svmfsmeta import SVMFsMeta
+
 
 def simulate(method, data_scaled, population_size, input_cols, output_col, num_features, iter_type, iter_val, **kwargs):
     print(f"Running NSGA-II simulation with method: {method}, population size: {population_size}, number of features: {num_features}, iteration type: {iter_type}, and iteration value: {iter_val}")
@@ -23,17 +26,43 @@ def simulate(method, data_scaled, population_size, input_cols, output_col, num_f
     return algorithm, method
 
 
-DEFAULT_DATA_URL = "https://raw.githubusercontent.com/danielvacarre/NSGAII_SVM_FS/main/data/09Colon_p.txt"
+COLON_PACKAGE_VERSION = "1.5-3"
+
+
+def load_colon():
+    """Load the same Colon dataset and class encoding as the R example."""
+    try:
+        from skdatasets.repositories.cran import fetch_dataset
+    except ImportError as error:
+        raise RuntimeError(
+            "Loading Colon requires optional dependencies. Install them with: "
+            'python -m pip install "scikit-datasets[cran]" setuptools'
+        ) from error
+
+    colon = fetch_dataset(
+        "Colon", "plsgenomics", version=COLON_PACKAGE_VERSION
+    )["Colon"]
+    predictors = np.asarray(colon["X"], dtype=float)
+    labels = np.asarray(colon["Y"]).reshape(-1)
+    data = DataFrame(
+        predictors,
+        columns=[f"x{i}" for i in range(1, predictors.shape[1] + 1)],
+    )
+    data.insert(0, "y", np.where(labels == 2, -1, 1))
+    return data
+
+
 dominance_methods_list = ["DIST-EPS", "MC"]
 
 def main():
     dominance_methods = dominance_methods_list.copy()
 
     parser = argparse.ArgumentParser(description="NSGA-II SVM Feature Selection")
-    parser.add_argument("dataset", nargs="?", help="Path to the dataset")
-    parser.add_argument("--has_header", type=str, choices=['yes', 'no', 'y', 'n'], help="Does the file have a header? [yes/no]")
-    parser.add_argument("--has_index", type=str, choices=['yes', 'no', 'y', 'n'], help="Does the file have an index? [yes/no]")
-    parser.add_argument("--separator", type=str, help="Separator (e.g. ',' or ';')")
+    parser.add_argument("dataset", nargs="?", default="colon",
+                        help="CSV file path, or 'colon' to load plsgenomics::Colon (default)")
+    parser.add_argument("--has_header", type=str, choices=['yes', 'no', 'y', 'n'], help="CSV only: does the file have a header? [yes/no]")
+    parser.add_argument("--has_index", type=str, choices=['yes', 'no', 'y', 'n'], help="CSV only: does the file have an index? [yes/no]")
+    parser.add_argument("--separator", type=str, help="CSV only: separator (e.g. ',' or ';')")
     parser.add_argument("--normalize", type=str, choices=['yes', 'no', 'y', 'n'], help="Normalize input features? [yes/no]")
     
     parser.add_argument("--method", type=str, choices=dominance_methods, help="Dominance method")
@@ -55,15 +84,7 @@ def main():
     interactive = len(sys.argv) <= 2 and not any(arg.startswith('--') for arg in sys.argv)
 
     dataset = args.dataset
-    if not dataset:
-        if interactive:
-            dataset = input("Dataset path: ").strip()
-            if not dataset:
-                print(f"No dataset provided. You can download the dataset included in the GitHub repository: {DEFAULT_DATA_URL}")
-                sys.exit(1)
-        else:
-            parser.print_help()
-            sys.exit(1)
+    use_colon = dataset.lower() == "colon"
 
     # Resolve arguments with interactive prompts as fallback if running interactively
     def resolve_bool(arg_val, prompt, default_val):
@@ -75,32 +96,34 @@ def main():
                 return user_input in ['yes', 'y']
         return default_val
 
-    has_header = resolve_bool(args.has_header, "Does the file have a header?", False)
-    has_index = resolve_bool(args.has_index, "Does the file have an index column?", True)
-    separator = args.separator
-    if separator is None:
-        if interactive:
-            separator = input("Select separator (','  ';'  '\\t') [default: ',']: ").strip() or ","
-        else:
-            separator = ","
+    if not use_colon:
+        has_header = resolve_bool(args.has_header, "Does the file have a header?", False)
+        has_index = resolve_bool(args.has_index, "Does the file have an index column?", True)
+        separator = args.separator
+        if separator is None:
+            if interactive:
+                separator = input("Select separator (','  ';'  '\\t') [default: ',']: ").strip() or ","
+            else:
+                separator = ","
 
     normalize = resolve_bool(args.normalize, "Normalize input features?", True)
 
-    # CSV parsing config
-    header_option = 0 if has_header else None
-
     try:
-        data = read_csv(dataset, sep=separator, header=header_option)
-
-        if has_index:
-            data.drop(columns=[data.columns[0]], inplace=True)
-
-        if header_option is None:
-            num_cols = data.shape[1]
-            column_names = ['y'] + [f'x{i}' for i in range(1, num_cols)]
-            data.columns = column_names
+        if use_colon:
+            data = load_colon()
         else:
-            data = data[[data.columns[0]] + list(data.columns[1:])]
+            header_option = 0 if has_header else None
+            data = read_csv(dataset, sep=separator, header=header_option)
+
+            if has_index:
+                data.drop(columns=[data.columns[0]], inplace=True)
+
+            if header_option is None:
+                num_cols = data.shape[1]
+                column_names = ['y'] + [f'x{i}' for i in range(1, num_cols)]
+                data.columns = column_names
+            else:
+                data = data[[data.columns[0]] + list(data.columns[1:])]
             
         output_col = data.columns[0]
         input_cols = data.columns[1:].tolist()
@@ -117,7 +140,13 @@ def main():
         else:
             data_scaled = data.copy()
 
-        print(f"File loaded successfully.")
+        if use_colon:
+            print(
+                f"Colon loaded from plsgenomics {COLON_PACKAGE_VERSION}: "
+                f"{len(data)} samples, {len(input_cols)} predictors."
+            )
+        else:
+            print("File loaded successfully.")
 
     except Exception as e:
         print(f"Error while loading the data: {e}")
@@ -191,7 +220,7 @@ def main():
     # Run the NSGA-II algorithm
     algorithm, method_used = simulate(method, data_scaled, population_size, input_cols, output_col, num_features, iter_type, iter_val, **kwargs)
 
-    dataset_name = os.path.splitext(os.path.basename(dataset))[0]
+    dataset_name = "colon" if use_colon else os.path.splitext(os.path.basename(dataset))[0]
     if algorithm is not None:
         print(f"Results will be saved in the 'results' directory under '{dataset_name}/{method_used}/'.")
         algorithm.save_results(dataset_name, iteration_val=iter_val, iteration_type=iter_type)
