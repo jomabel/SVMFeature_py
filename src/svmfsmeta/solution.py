@@ -489,6 +489,7 @@ class Solution:
     def mutate_vectors(self, data, output):
         """
         Mutates class vectors by replacing each with a new one from the same class.
+        A class with no alternative observation keeps its current vector.
 
         Parameters
         ----------
@@ -500,10 +501,12 @@ class Solution:
 
         for i, class_label in enumerate(sorted(data[output].unique())):
             current_vector = self.vectors[i]
-            new_vector = self.get_class_vector(class_label, data, output)
-            while new_vector == current_vector:
-                new_vector = self.get_class_vector(class_label, data, output)
-            self.vectors[i] = new_vector
+            alternatives = [
+                label for label in data.loc[data[output] == class_label].index
+                if label != current_vector
+            ]
+            if alternatives:
+                self.vectors[i] = choice(alternatives)
 
     def mutate_solution(self, p_mutate_individual, p_mutate_feature,
                         p_mutate_coord, coord_mutation_type,

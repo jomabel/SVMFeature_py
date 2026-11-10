@@ -1,4 +1,4 @@
-from random import randint, uniform
+from random import sample, uniform
 from pandas import DataFrame
 from .front import Front
 from .solution import Solution
@@ -64,6 +64,8 @@ class Population:
         This method repeatedly generates random candidate solutions, evaluates them,
         and adds them to the population if they are valid. If `allow_clones` is False,
         it ensures that no duplicate solutions are added.
+        Generation raises RuntimeError after 100 consecutive invalid or forbidden
+        duplicate candidates. Accepting a candidate resets this counter.
 
         Parameters
         ----------
@@ -86,18 +88,28 @@ class Population:
         -------
         None
         """
-        solution_id = 0
+        solution_id = len(self.solutions)
+        consecutive_rejections = 0
+        max_rejections = 100
 
         while len(self.solutions) < population_size:
             solution = Solution(solution_id)
             solution.generate_random_solution(data, inputs, output, num_selected_features)
 
-            if solution.evaluate_solution(data, output, inputs) != 1:
+            if (solution.evaluate_solution(data, output, inputs) != 1 or
+                    (not allow_clones and self.check_clones(solution, method))):
+                consecutive_rejections += 1
+                if consecutive_rejections >= max_rejections:
+                    raise RuntimeError(
+                        "Unable to generate the initial population after "
+                        f"{max_rejections} consecutive rejections. "
+                        "Check the data and clone settings."
+                    )
                 continue
 
-            if allow_clones or not self.check_clones(solution, method):
-                self.solutions.append(solution)
-                solution_id += 1
+            consecutive_rejections = 0
+            self.solutions.append(solution)
+            solution_id += 1
 
         self.generate_solutions_df()
 
@@ -233,7 +245,10 @@ class Population:
         This method uses tournament selection to choose two distinct parents, performs
         crossover to generate offspring, and applies mutation based on predefined probabilities.
         The new population is expanded to 2 * population_size. The method ensures that only valid
-        and non-clone solutions are added to the population.
+        solutions are added to the population. Duplicate offspring are accepted
+        when allow_clones is true. Repair attempts are bounded, and 100 consecutive
+        rejected offspring raise RuntimeError. Accepting an offspring resets
+        the rejection counter.
 
         Parameters
         ----------
@@ -264,23 +279,22 @@ class Population:
         -------
         None
         """
-        i = population_size
+        i = len(self.solutions)
         max_attempts = 10
+        consecutive_rejections = 0
+        max_rejections = 100
         
         while i < 2 * population_size:
             # Select two distinct parents using tournament selection
-            father = self.tournament_select_parent(population_size)
-            mother = self.tournament_select_parent(population_size)
-
-            # Ensure both parents are distinct
-            while father.solution_id == mother.solution_id:
-                mother = self.tournament_select_parent(population_size)
+            father, mother = self.select_two_distinct_parents(population_size)
 
             # Perform crossover: create 4 offspring and keep the 2 best
             offspring = self.crossover_solutions(father, mother, i, method, data, inputs, output)
 
             # Mutate the offspring
             for child in offspring:
+                if len(self.solutions) >= 2 * population_size:
+                    break
                 # Check if mutation should be applied
                 if uniform(0, 1) < p_mutation:
                     child.mutate_solution(
@@ -292,13 +306,20 @@ class Population:
                         inputs,
                         output
                     )
-                # Ensure the solution is valid
-                while child.evaluate_solution(data, output, inputs) == 0:
-                    child.generate_random_solution()
+                # Try to regenerate an invalid child without an unbounded loop.
+                valid = child.evaluate_solution(data, output, inputs) == 1
+                validity_attempts = 0
+                while not valid and validity_attempts < max_attempts:
+                    child.generate_random_solution(
+                        data, inputs, output, len(child.features)
+                    )
+                    validity_attempts += 1
+                    valid = child.evaluate_solution(data, output, inputs) == 1
 
                 attempts = 0
                 # Check for clones and mutate if needed
-                while self.check_clones(child, method) != 0 and allow_clones == 0 and attempts < max_attempts:
+                while (valid and not allow_clones and attempts < max_attempts and
+                       self.check_clones(child, method)):
                     child.mutate_solution(
                         p_mutate_individual,
                         p_mutate_feature,
@@ -310,9 +331,9 @@ class Population:
                     )
 
                     # Ensure the solution is valid
+                    valid = child.evaluate_solution(data, output, inputs) == 1
                     validity_attempts = 0
-                    while (child.evaluate_solution(data, output, inputs) == 0 and
-                           validity_attempts < max_attempts):
+                    while not valid and validity_attempts < max_attempts:
                         child.mutate_solution(
                             p_mutate_individual,
                             p_mutate_feature,
@@ -323,14 +344,25 @@ class Population:
                             output
                         )
                         validity_attempts += 1
+                        valid = child.evaluate_solution(data, output, inputs) == 1
                     attempts += 1
                 
                 
-                # Lastly, check if the child is valid and not a clone
-                if allow_clones == 0 and self.check_clones(child, method) == 0 and child.evaluate_solution(data, output, inputs) != 0:
+                # Accept valid children, allowing duplicates when requested.
+                if valid and (allow_clones or not self.check_clones(child, method)):
                     # Add valid child to the population
+                    child.solution_id = len(self.solutions)
                     self.solutions.append(child)
                     i = len(self.solutions)
+                    consecutive_rejections = 0
+                else:
+                    consecutive_rejections += 1
+                    if consecutive_rejections >= max_rejections:
+                        raise RuntimeError(
+                            "Unable to generate acceptable offspring after "
+                            f"{max_rejections} consecutive rejections. "
+                            "Check the data and clone and mutation settings."
+                        )
 
 
                 
@@ -392,7 +424,7 @@ class Population:
 
         This method selects two parents from the population using tournament selection.
         It ensures that the two parents are distinct by comparing their solution IDs,
-        retrying if both parents have the same ID.
+        retrying up to 100 times if both parents have the same ID.
 
         Parameters
         ----------
@@ -403,15 +435,23 @@ class Population:
         -------
         Tuple[Solution, Solution]
             A pair of distinct parent solutions selected using tournament selection.
+
+        Raises
+        ------
+        RuntimeError
+            If repeated tournaments cannot select two distinct parents.
         """
         father = self.tournament_select_parent(population_size)
-        mother = self.tournament_select_parent(population_size)
-
-        # Ensure that the father and mother are distinct
-        while father.solution_id == mother.solution_id:
+        max_attempts = 100
+        for _ in range(max_attempts):
             mother = self.tournament_select_parent(population_size)
+            if father.solution_id != mother.solution_id:
+                return father, mother
 
-        return father, mother
+        raise RuntimeError(
+            f"Unable to select distinct parents after {max_attempts} attempts. "
+            "Check the population size and diversity."
+        )
 
     def tournament_select_parent(self, population_size: int):
         """
@@ -429,14 +469,18 @@ class Population:
         -------
         Solution
             The selected parent solution, which is the dominant one of the two chosen.
-        """
-        # Randomly select two distinct solutions from the population
-        parent1 = self.get_solution_by_id(randint(0, population_size - 1))
-        parent2 = self.get_solution_by_id(randint(0, population_size - 1))
 
-        # Ensure that the two solutions are distinct
-        while parent1.solution_id == parent2.solution_id:
-            parent2 = self.get_solution_by_id(randint(0, population_size - 1))
+        Raises
+        ------
+        ValueError
+            If the requested population size is less than two.
+        """
+        if population_size < 2:
+            raise ValueError("Tournament selection requires at least two solutions.")
+        # Sampling without replacement avoids retrying the same contender.
+        first_id, second_id = sample(range(population_size), 2)
+        parent1 = self.get_solution_by_id(first_id)
+        parent2 = self.get_solution_by_id(second_id)
 
         # Compare the two solutions and return the dominant one
         return parent1.compare_solutions(parent2)
