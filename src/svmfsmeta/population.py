@@ -39,14 +39,14 @@ class Population:
         by calling their `to_dict()` method, then sorts the resulting DataFrame by
         Pareto front (ascending). The result is stored in `self.solutions_df`.
 
+
         Returns
         -------
         None
         """
         self.solutions_df = (
             DataFrame.from_records([solution.to_dict() for solution in self.solutions])
-            .sort_values(by='FRONT', ascending=True)
-            .round(decimals=2)
+            .sort_values(by='FRONT', ascending=True).round(decimals=3)
         )
 
     def generate_initial_population(
