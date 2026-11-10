@@ -213,7 +213,16 @@ class Solution:
         -------
         int
             1 if evaluation succeeded, 0 if the solution is invalid.
+            Invalid solutions have NaN objectives and no cached metrics.
         """
+        # Clear previous results before validating changed genes. An invalid
+        # candidate must not retain zero defaults or an earlier good score.
+        self.objective = [float('nan')] * 4
+        self.plane_term_b = []
+        self.conf_matrix = None
+        self.accuracy = self.precision = self.recall = self.f1 = None
+        self.kappa = self.auc = None
+
         if (
             not isinstance(self.plane_coords, (list, tuple)) or
             len(self.plane_coords) != len(self.features) or

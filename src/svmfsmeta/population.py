@@ -1,3 +1,4 @@
+from math import isfinite
 from random import sample, uniform
 from pandas import DataFrame
 from .front import Front
@@ -600,8 +601,11 @@ class Population:
         Compares two offspring and selects the best one based on dominance relations.
 
         This method uses the concept of dominance in multi-objective optimization to compare the two offspring.
-        If one offspring dominates the other, the dominant one is selected. If neither dominates the other,
-        the tie is broken randomly.
+        A candidate with finite active objectives is preferred to an invalid
+        candidate before dominance is considered. Two invalid candidates tie;
+        any invalid child returned by crossover is repaired before acceptance.
+        If both candidates are valid, dominance selects the winner and ties
+        are broken randomly.
 
         Parameters
         ----------
@@ -619,8 +623,22 @@ class Population:
             is the inferior offspring (the loser).
         """
 
-        # Compare the two offspring based on dominance
-        dominance_result = child1.compare_dominance(child2, method)
+        if method == 'DIST-EPS':
+            active_objectives = (0, 1)
+        elif method == 'MC':
+            active_objectives = (2, 3)
+        else:
+            raise ValueError("Invalid method for dominance comparison.")
+
+        valid1 = all(isfinite(child1.objective[i]) for i in active_objectives)
+        valid2 = all(isfinite(child2.objective[i]) for i in active_objectives)
+        if valid1 and not valid2:
+            return child1, child2
+        if valid2 and not valid1:
+            return child2, child1
+
+        # Invalid candidates tie without entering a dominance comparison.
+        dominance_result = child1.compare_dominance(child2, method) if valid1 and valid2 else 0
 
         # Return the winner and loser based on the dominance result
         if dominance_result == 1:
