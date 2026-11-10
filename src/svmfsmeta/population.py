@@ -498,29 +498,30 @@ class Population:
             A list containing the two best offspring solutions after crossover and comparison.
         """
 
+        # Give each child its own gene lists so mutation leaves parents and siblings intact.
         # Create four offspring solutions using crossover from the parents
         # First child: father's features and coordinates, father's first vector and mother's second vector
         child1 = Solution(solution_id)
-        child1.features = father.features
-        child1.plane_coords = father.plane_coords
+        child1.features = list(father.features)
+        child1.plane_coords = list(father.plane_coords)
         child1.vectors = [father.vectors[0], mother.vectors[1]]
 
         # Second child: mother's features and coordinates, father's first vector and mother's second vector
         child2 = Solution(solution_id + 1)
-        child2.features = mother.features
-        child2.plane_coords = mother.plane_coords
+        child2.features = list(mother.features)
+        child2.plane_coords = list(mother.plane_coords)
         child2.vectors = [father.vectors[0], mother.vectors[1]]
 
         # Third child: father's features and coordinates, mother's first vector and father's second vector
         child3 = Solution(solution_id + 2)
-        child3.features = father.features
-        child3.plane_coords = father.plane_coords
+        child3.features = list(father.features)
+        child3.plane_coords = list(father.plane_coords)
         child3.vectors = [mother.vectors[0], father.vectors[1]]
 
         # Fourth child: mother's features and coordinates, mother's first vector and father's second vector
         child4 = Solution(solution_id + 3)
-        child4.features = mother.features
-        child4.plane_coords = mother.plane_coords
+        child4.features = list(mother.features)
+        child4.plane_coords = list(mother.plane_coords)
         child4.vectors = [mother.vectors[0], father.vectors[1]]
 
         # Evaluate the offspring solutions 
