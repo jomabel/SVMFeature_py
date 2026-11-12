@@ -253,6 +253,19 @@ The dashboard requires the full repository. Install the additional
 requirements and launch it from the project directory:
 
 ```bash
-pip install -r requirements.txt
-streamlit run streamlit_app.py
+python -m pip install -e ".[examples]"
+python -m pip install -r requirements.txt
+python -m streamlit run streamlit_app.py
 ```
+
+Choose **Colon (plsgenomics)** to load the same dataset as the CLI and R
+examples, or upload a CSV/TXT file. Colon is cached after its first download.
+For legacy files with an initial weights/costs row, enable **First row
+contains feature weights/costs**. The response must contain only `-1` and `1`,
+with both classes present.
+
+Completed simulations remain available when saving results. Changing the
+dataset or training configuration clears the previous result, so the displayed
+model always matches the current inputs. CSVs are saved under
+`results/colon/<method>/` for Colon and `results/streamlit_upload/<method>/`
+for uploads.

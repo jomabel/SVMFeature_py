@@ -8,10 +8,10 @@ title("🌱 Multiobjective SVM feature selection via metaheuristics")
 tab1, tab2 = tabs(["⚙️ Simulation", "📊 Results"])
 
 with tab1:
-    algorithm, method = show_simulation()
+    algorithm, method, dataset_name = show_simulation()
 
 with tab2:
     if algorithm:
-        show_results(algorithm, method)
+        show_results(algorithm, method, dataset_name)
     else:
         warning("⚠️ Run a simulation first.")

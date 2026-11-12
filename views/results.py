@@ -4,7 +4,7 @@ from streamlit import header, success, dataframe, subheader, plotly_chart, error
 from src.utils.visualization import plot_pareto_front
 
 
-def show_results(algorithm,method):
+def show_results(algorithm, method, dataset_name="streamlit_upload"):
     header("Results and visualization")
 
     # === Results ===
@@ -15,8 +15,12 @@ def show_results(algorithm,method):
     dataframe(pareto_front)
 
     if button("💾 Save results to CSV"):
-        algorithm.save_results("streamlit_upload")
-        success(f"📁 Pareto front saved successfully in results/streamlit_upload/{method}/")
+        try:
+            algorithm.save_results(dataset_name)
+        except OSError as exc:
+            error(f"❌ Could not save the results: {exc}")
+        else:
+            success(f"📁 Pareto front saved successfully in results/{dataset_name}/{method}/")
 
     # === Visualization ===
     subheader("🌐 Pareto Front Visualization")
