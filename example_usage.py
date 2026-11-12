@@ -3,8 +3,8 @@ from sklearn.preprocessing import MinMaxScaler
 from svmfsmeta import SVMFsMeta
 
 # 1. Load the included dataset
-# Example with '09Colon_p.txt': no header, first column is target.
-data = pd.read_csv("data/09Colon_p.txt", sep=";", header=None)
+# Example with 'Colon.txt': no header, first column is target.
+data = pd.read_csv("data/Colon.txt", sep=";", header=None)
 
 # 2. Drop the index column and extract feature names and target
 data = data.drop(columns=[0])
