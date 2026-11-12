@@ -196,6 +196,12 @@ The final population is available as `optimizer.population`. Its
 `solutions_df` table contains candidate summaries and their `FRONT` values.
 Filter `FRONT == 0` to obtain the first non-dominated front.
 
+`DOMINATES` and `DOMINATED_BY` contain current `SOL` identifiers from the full
+population. `NUM_DOMINATED_BY` is the length of `DOMINATED_BY`. These fields
+are rebuilt after survivor selection and renumbering. A Pareto-only CSV can
+therefore reference other population members that are outside the exported
+front; its identifiers refer to the full population, not CSV row positions.
+
 ### `draw_solution()`
 
 Plots the first non-dominated front for the selected objective pair.

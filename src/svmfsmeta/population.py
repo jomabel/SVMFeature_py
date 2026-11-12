@@ -1,3 +1,4 @@
+from copy import deepcopy
 from math import isfinite
 from random import sample, uniform
 from pandas import DataFrame
@@ -209,6 +210,9 @@ class Population:
 
         self.fronts.append(front)
 
+        # Sorting consumes a temporary count, not the actual number of
+        # dominators exported for each solution.
+        remaining_dominators = [sol.num_dominated_by for sol in self.solutions]
         # Build subsequent fronts
         front_index = 0
         while self.fronts[front_index].solutions:
@@ -217,8 +221,8 @@ class Population:
                 sol = self.solutions[sol_index]
                 for dominated_index in sol.dominates_list:
                     dominated_sol = self.solutions[dominated_index]
-                    dominated_sol.num_dominated_by -= 1
-                    if dominated_sol.num_dominated_by == 0:
+                    remaining_dominators[dominated_index] -= 1
+                    if remaining_dominators[dominated_index] == 0:
                         dominated_sol.front = front_index + 1
                         next_front.solutions.append(dominated_index)
             front_index += 1
@@ -411,11 +415,14 @@ class Population:
             sorted_by_crowding = self.calculate_crowding_distance(method, current_front)
             reduced_population.solutions.extend(sorted_by_crowding[:remaining_needed])
 
-        # Reassign solution indices
+        # Work on independent survivors: renumbering must not change the
+        # original population or invalidate its dominance references.
+        reduced_population.solutions = deepcopy(reduced_population.solutions)
         for idx, sol in enumerate(reduced_population.solutions):
             sol.solution_id = idx
 
-        reduced_population.generate_solutions_df()
+        # Rebuild counts, references and fronts for the surviving population.
+        reduced_population.fnds(method)
 
         return reduced_population
 
