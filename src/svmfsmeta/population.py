@@ -424,8 +424,9 @@ class Population:
         Selects two distinct parents using tournament selection.
 
         This method selects two parents from the population using tournament selection.
-        It ensures that the two parents are distinct by comparing their solution IDs,
-        retrying up to 100 times if both parents have the same ID.
+        With two individuals, the tournament chooses the first parent and
+        the other individual is the second parent. With larger populations,
+        distinct IDs are sought through at most 100 repeated tournaments.
 
         Parameters
         ----------
@@ -443,6 +444,10 @@ class Population:
             If repeated tournaments cannot select two distinct parents.
         """
         father = self.tournament_select_parent(population_size)
+        if population_size == 2:
+            # Both tournaments would always pick a dominant individual. The
+            # other original parent is the only possible distinct choice.
+            return father, self.get_solution_by_id(1 - father.solution_id)
         max_attempts = 100
         for _ in range(max_attempts):
             mother = self.tournament_select_parent(population_size)
