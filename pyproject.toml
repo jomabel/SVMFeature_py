@@ -24,6 +24,12 @@ dependencies = [
 ]
 
 
+[project.optional-dependencies]
+examples = [
+    "scikit-datasets[cran]>=0.2.5",
+    "setuptools",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["svmfsmeta*"]

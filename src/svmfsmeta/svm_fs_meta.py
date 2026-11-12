@@ -1,13 +1,27 @@
 from copy import deepcopy
+from math import isfinite
+from numbers import Integral, Real
 from time import time
 from matplotlib.pyplot import show, figure, xlabel, ylabel, title, grid, scatter
 import os
 import pandas as pd
+import numpy as np
+from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
 
 from .population import Population
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _is_finite_real(value):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        return False
+    try:
+        return isfinite(value)
+    except OverflowError:
+        return False
+
 
 class SVMFsMeta:
     """
@@ -20,13 +34,13 @@ class SVMFsMeta:
     data : pandas.DataFrame
         The dataset to be used.
     population_size : int
-        Number of individuals in the population.
+        Integer number of individuals in the population, at least 2.
     inputs : list
         List of input (feature) column names.
     output : str
         Name of the output (target) column.
     num_selected_features : int
-        Maximum number of features to be selected.
+        Exact integer number of selected features, from 1 to len(inputs).
     allow_clones : int, optional
         Whether to allow cloned individuals in the population (default is 0).
     p_mutation : float, optional
@@ -38,7 +52,14 @@ class SVMFsMeta:
     p_mutate_coord : float, optional
         Probability of mutating the coordinate (SVM hyperparameters) (default is 0.2).
     coord_mutation_type : int, optional
-        Type of mutation to apply on the coordinates (default is 0).
+        Coordinate mutation type: 0 (scaling) or 1 (replacement).
+
+    Raises
+    ------
+    TypeError, ValueError
+        If configuration is invalid. Predictors must be finite real numeric
+        columns, the response must contain both -1 and 1, and probabilities
+        must be finite real numbers in [0, 1]. Index labels must be unique.
     """
 
     def __init__(self, method, data, population_size, inputs, output, num_selected_features,
@@ -58,7 +79,64 @@ class SVMFsMeta:
         self.coord_mutation_type = coord_mutation_type
         self.custom_logger = logger
 
+        self._validate_configuration()
         self.population = None
+
+    def _validate_configuration(self):
+        """Reject invalid configuration before any population is generated."""
+        if not isinstance(self.data, pd.DataFrame):
+            raise TypeError("data must be a pandas DataFrame.")
+        if self.data.empty:
+            raise ValueError("data must contain rows and columns.")
+        if not self.data.columns.is_unique:
+            raise ValueError("data must have unique column names.")
+        if not self.data.index.is_unique:
+            raise ValueError("data must have unique index labels.")
+        if (not isinstance(self.inputs, (list, tuple)) or not self.inputs or
+                not all(isinstance(name, str) and name for name in self.inputs) or
+                len(set(self.inputs)) != len(self.inputs) or
+                not all(name in self.data.columns for name in self.inputs)):
+            raise ValueError("inputs must be a non-empty list or tuple of unique existing column names.")
+        if (not isinstance(self.output, str) or not self.output or
+                self.output not in self.data.columns):
+            raise ValueError("output must name one existing column in data.")
+        if self.output in self.inputs:
+            raise ValueError("inputs must not include output.")
+        if not isinstance(self.method, str) or self.method not in ('DIST-EPS', 'MC'):
+            raise ValueError("method must be 'DIST-EPS' or 'MC'.")
+
+        for name, minimum in (('population_size', 2), ('num_selected_features', 1)):
+            value = getattr(self, name)
+            if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral) or value < minimum:
+                raise ValueError(f"{name} must be an integer greater than or equal to {minimum}.")
+        if self.num_selected_features > len(self.inputs):
+            raise ValueError("num_selected_features must not exceed the number of inputs.")
+        for name in ('p_mutation', 'p_mutate_individual', 'p_mutate_feature', 'p_mutate_coord'):
+            value = getattr(self, name)
+            if not _is_finite_real(value) or not 0 <= value <= 1:
+                raise ValueError(f"{name} must be a finite number between 0 and 1.")
+        for name in ('allow_clones', 'coord_mutation_type'):
+            value = getattr(self, name)
+            if not isinstance(value, (Integral, np.bool_)) or value not in (0, 1):
+                raise ValueError(f"{name} must be 0 or 1 (False or True).")
+        if (self.custom_logger is not None and not callable(self.custom_logger) and
+                not callable(getattr(self.custom_logger, 'info', None))):
+            raise TypeError("logger must be None, a callable, or an object with a callable info method.")
+
+        def real_numeric(series):
+            return (is_numeric_dtype(series.dtype) and not is_bool_dtype(series.dtype) and
+                    not is_complex_dtype(series.dtype))
+
+        if not all(real_numeric(self.data[name]) for name in self.inputs):
+            raise ValueError("inputs must select real numeric columns with only finite values.")
+        predictors = self.data[list(self.inputs)].to_numpy(dtype=float, na_value=np.nan)
+        if not np.isfinite(predictors).all():
+            raise ValueError("inputs must select real numeric columns with only finite values.")
+        response = self.data[self.output]
+        if (not real_numeric(response) or response.isna().any() or
+                not response.isin([-1, 1]).all() or response.nunique() != 2):
+            raise ValueError("output must contain both numeric classes -1 and 1, with no other values.")
+
     def run(self, train='sec', num_iter=10):
         """
         Execute the NSGA-II optimization process.
@@ -67,9 +145,25 @@ class SVMFsMeta:
         ----------
         train : str, optional
             Training mode: 'sec' (run for a number of seconds) or 'iter' (run for a number of iterations).
-        num_iter : int, optional
-            Number of iterations or seconds (depending on 'train') (default is 10).
+        num_iter : int or float, optional
+            Positive integer iterations for 'iter', or positive finite seconds
+            for 'sec' (default is 10).
+
+        Raises
+        ------
+        TypeError, ValueError
+            If the configuration or training budget is invalid. Validation
+            happens before replacing the population or generating candidates.
         """
+        self._validate_configuration()
+        if not isinstance(train, str) or train not in ('iter', 'sec'):
+            raise ValueError("train must be 'sec' or 'iter'.")
+        if train == 'iter':
+            if (isinstance(num_iter, (bool, np.bool_)) or
+                    not isinstance(num_iter, Integral) or num_iter < 1):
+                raise ValueError("num_iter must be a positive integer when train='iter'.")
+        elif not _is_finite_real(num_iter) or num_iter <= 0:
+            raise ValueError("num_iter must be a positive finite number when train='sec'.")
 
         self.population = Population()
         self.population.generate_initial_population(

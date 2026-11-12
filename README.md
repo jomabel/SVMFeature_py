@@ -152,10 +152,10 @@ The main class to initialize and run the optimization.
 | :--- | :--- | :--- | :--- |
 | `method` | `str` | Required | Objective pair: `"DIST-EPS"` or `"MC"`. |
 | `data` | `pd.DataFrame` | Required | Dataset containing the response and predictors. |
-| `population_size` | `int` | Required | Number of candidates in the population. |
+| `population_size` | `int` | Required | Number of candidates in the population; at least 2. |
 | `inputs` | `list[str]` | Required | Names of predictor columns. |
 | `output` | `str` | Required | Name of the response column. |
-| `num_selected_features` | `int` | Required | Exact number of predictors selected in each candidate. |
+| `num_selected_features` | `int` | Required | Exact number of predictors selected in each candidate, from 1 to `len(inputs)`. |
 | `allow_clones` | `int` | `0` | `0` forbids duplicate individuals; `1` allows them. |
 | `p_mutation` | `float` | `0.7` | Probability of applying mutation to offspring. |
 | `p_mutate_individual` | `float` | `0.4` | Probability of mutating an individual. |
@@ -164,18 +164,33 @@ The main class to initialize and run the optimization.
 | `coord_mutation_type` | `int` | `0` | `0` scales coordinates; `1` replaces them. |
 | `logger` | callback or logger | `None` | Optional custom logging callback or logger. |
 
-Use numeric predictors and response labels `-1` and `1`; both classes should
-be present. Column names supplied in `inputs` and `output` must exist in the
-DataFrame.
+The constructor validates configuration before training. `data` must be a
+non-empty DataFrame with unique column names and unique row index labels.
+`inputs` must be a non-empty list or tuple of unique existing column names,
+and must exclude `output`. Selected predictors must contain only finite real
+numeric values. The response must contain both numeric labels `-1` and `1`,
+with no missing values or other classes. Unused columns are not validated for
+numeric content.
+
+Population and feature counts must be integers; booleans are not counts.
+All four mutation probabilities must be finite real numbers in `[0, 1]`.
+`allow_clones` and `coord_mutation_type` accept integer `0`/`1` or booleans.
+`logger` must be `None`, a callable, or an object with a callable `info` method.
+Invalid configuration raises `TypeError` or `ValueError` naming the parameter.
 
 ### `run(train="sec", num_iter=10)`
 
 Generates the initial population and runs NSGA-II.
 
-- `train="iter"` runs for `num_iter` iterations.
-- `train="sec"` runs until the requested number of seconds has elapsed. The
-  limit is approximate: initialization happens first and an iteration already
-  underway is allowed to finish.
+- `train="iter"` requires a positive integer `num_iter` and runs that many
+  iterations.
+- `train="sec"` requires a positive finite number of seconds; fractional
+  seconds are accepted. The limit is approximate: initialization happens first
+  and an iteration already underway is allowed to finish.
+
+Configuration and the training budget are checked again before generating
+candidates or replacing an existing population. Zero, negative, non-finite,
+and boolean budgets are rejected; `train` must be `"iter"` or `"sec"`.
 
 The final population is available as `optimizer.population`. Its
 `solutions_df` table contains candidate summaries and their `FRONT` values.
