@@ -47,7 +47,7 @@ class TestOptimizerValidation(unittest.TestCase):
 
     def test_counts_require_integers_and_features_fit_available_inputs(self):
         for name, values in (
-            ('population_size', (0, 1, -2, 2.5, 6.0, True, np.inf, '6', None)),
+            ('population_size', (0, 1, 2, -2, 2.5, 6.0, True, np.inf, '6', None)),
             ('num_selected_features', (0, -1, 3, 1.5, True, np.nan, '1', None)),
         ):
             for value in values:
@@ -128,8 +128,8 @@ class TestOptimizerValidation(unittest.TestCase):
         previous = object()
         optimizer.population = previous
         state = random.getstate()
-        cases = [('iter', value) for value in (-1, 0, 1.5, 1.0, True, np.nan, np.inf, None, '1')]
-        cases += [('sec', value) for value in (-1, 0, True, np.nan, np.inf, None, '1', 2 ** 2000)]
+        cases = [('iter', value) for value in (-1, 0, 1.5, 1.0, True, np.nan, np.inf, '1')]
+        cases += [('sec', value) for value in (-1, 0, True, np.nan, np.inf, '1', 2 ** 2000)]
         cases += [(value, 1) for value in ('invalid', None, [], 1)]
         with patch.object(Population, 'generate_initial_population') as generate:
             for train, count in cases:

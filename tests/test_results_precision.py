@@ -48,14 +48,14 @@ class TestResultsPrecision(unittest.TestCase):
                     self.assertEqual(row[column], expected, column)
 
     def test_csv_preserves_precision_and_exports_only_the_first_front(self):
-        data = pd.DataFrame({'x': [-1., 1.], 'y': [-1, 1]})
+        data = pd.DataFrame({'x': [-1., -.5, .5, 1.], 'y': [-1, -1, 1, 1]})
         for method in ('DIST-EPS', 'MC'):
             with self.subTest(method=method), TemporaryDirectory() as directory:
-                optimizer = SVMFsMeta(method, data, 2, ['x'], 'y', 1)
+                optimizer = SVMFsMeta(method, data, 3, ['x'], 'y', 1)
                 optimizer.population = self.make_population(method)
                 optimizer.save_results('precision', output_dir=directory,
                                        iteration_val=1, iteration_type='iter')
-                output = Path(directory) / 'precision' / method / '2_iter_1.csv'
+                output = Path(directory) / 'precision' / method / '3_iter_1.csv'
                 exported = pd.read_csv(output, float_precision='round_trip')
                 self.assertEqual(exported['SOL'].tolist(), [0])
                 self.assertEqual(exported['FRONT'].tolist(), [0])

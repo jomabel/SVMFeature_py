@@ -34,7 +34,7 @@ class SVMFsMeta:
     data : pandas.DataFrame
         The dataset to be used.
     population_size : int
-        Integer number of individuals in the population, at least 2.
+        Integer number of individuals in the population, at least 3.
     inputs : list
         List of input (feature) column names.
     output : str
@@ -58,8 +58,9 @@ class SVMFsMeta:
     ------
     TypeError, ValueError
         If configuration is invalid. Predictors must be finite real numeric
-        columns, the response must contain both -1 and 1, and probabilities
-        must be finite real numbers in [0, 1]. Index labels must be unique.
+        columns, the response must contain at least two samples of each class
+        (-1 and 1), and probabilities must be finite real numbers in [0, 1].
+        Index labels must be unique.
     """
 
     def __init__(self, method, data, population_size, inputs, output, num_selected_features,
@@ -81,6 +82,7 @@ class SVMFsMeta:
 
         self._validate_configuration()
         self.population = None
+        self._population_context = None
 
     def _validate_configuration(self):
         """Reject invalid configuration before any population is generated."""
@@ -105,7 +107,7 @@ class SVMFsMeta:
         if not isinstance(self.method, str) or self.method not in ('DIST-EPS', 'MC'):
             raise ValueError("method must be 'DIST-EPS' or 'MC'.")
 
-        for name, minimum in (('population_size', 2), ('num_selected_features', 1)):
+        for name, minimum in (('population_size', 3), ('num_selected_features', 1)):
             value = getattr(self, name)
             if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral) or value < minimum:
                 raise ValueError(f"{name} must be an integer greater than or equal to {minimum}.")
@@ -136,8 +138,10 @@ class SVMFsMeta:
         if (not real_numeric(response) or response.isna().any() or
                 not response.isin([-1, 1]).all() or response.nunique() != 2):
             raise ValueError("output must contain both numeric classes -1 and 1, with no other values.")
+        if (response.eq(-1).sum() < 2) or (response.eq(1).sum() < 2):
+            raise ValueError("output must contain at least two observations in each class.")
 
-    def run(self, train='sec', num_iter=10):
+    def run(self, train='iter', num_iter=None):
         """
         Execute the NSGA-II optimization process.
 
@@ -147,7 +151,13 @@ class SVMFsMeta:
             Training mode: 'sec' (run for a number of seconds) or 'iter' (run for a number of iterations).
         num_iter : int or float, optional
             Positive integer iterations for 'iter', or positive finite seconds
-            for 'sec' (default is 10).
+            for 'sec'. None selects 10 iterations or 300 seconds, respectively.
+
+        Returns
+        -------
+        SVMFsMeta
+            This optimizer. Repeated calls continue its population when data
+            and structural configuration are unchanged.
 
         Raises
         ------
@@ -158,6 +168,8 @@ class SVMFsMeta:
         self._validate_configuration()
         if not isinstance(train, str) or train not in ('iter', 'sec'):
             raise ValueError("train must be 'sec' or 'iter'.")
+        if num_iter is None:
+            num_iter = 10 if train == 'iter' else 300
         if train == 'iter':
             if (isinstance(num_iter, (bool, np.bool_)) or
                     not isinstance(num_iter, Integral) or num_iter < 1):
@@ -165,12 +177,20 @@ class SVMFsMeta:
         elif not _is_finite_real(num_iter) or num_iter <= 0:
             raise ValueError("num_iter must be a positive finite number when train='sec'.")
 
-        self.population = Population()
+        context = (self.method, self.population_size, self.num_selected_features,
+                   tuple(self.inputs), self.output,
+                   pd.util.hash_pandas_object(self.data[list(self.inputs) + [self.output]],
+                                             index=True).values.tobytes())
+        if (not isinstance(self.population, Population) or
+                len(self.population.solutions) != self.population_size or
+                (self._population_context is not None and context != self._population_context)):
+            self.population = Population()
         self.population.generate_initial_population(
             self.population_size, self.data, self.inputs, self.output,
             self.num_selected_features, self.allow_clones, self.method
         )
         self.population.fnds(self.method)
+        self._population_context = context
         self._log(f"Initial population: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
 
         i = 1
@@ -185,8 +205,7 @@ class SVMFsMeta:
                 self.nsga2()
                 self._log(f"Iteration {i}: {len(self.population.solutions_df[self.population.solutions_df.FRONT == 0])} solutions in front 0")
                 i += 1
-        else:
-            raise ValueError("Invalid training method. Choose 'sec' or 'iter'.")
+        return self
 
     def nsga2(self):
         """

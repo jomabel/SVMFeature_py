@@ -89,15 +89,15 @@ class TestDominanceMetadata(unittest.TestCase):
                 self.assertEqual([s.front for s in reduced.solutions], [0, 0])
 
     def test_pareto_csv_uses_current_population_identifiers(self):
-        data = pd.DataFrame({'x': [-1., 1.], 'y': [-1, 1]})
+        data = pd.DataFrame({'x': [-1., -.5, .5, 1.], 'y': [-1, -1, 1, 1]})
         for method in ('DIST-EPS', 'MC'):
             with self.subTest(method=method), TemporaryDirectory() as directory:
-                optimizer = SVMFsMeta(method, data, 2, ['x'], 'y', 1)
-                optimizer.population = self.chain(method).reduce_population(2, method)
+                optimizer = SVMFsMeta(method, data, 3, ['x'], 'y', 1)
+                optimizer.population = self.chain(method).reduce_population(3, method)
                 optimizer.save_results('metadata', output_dir=directory)
-                exported = pd.read_csv(Path(directory) / 'metadata' / method / '2.csv')
+                exported = pd.read_csv(Path(directory) / 'metadata' / method / '3.csv')
                 self.assertEqual(exported['SOL'].tolist(), [0])
-                self.assertEqual(literal_eval(exported.loc[0, 'DOMINATES']), [1])
+                self.assertEqual(literal_eval(exported.loc[0, 'DOMINATES']), [1, 2])
                 self.assertEqual(literal_eval(exported.loc[0, 'DOMINATED_BY']), [])
                 self.assertEqual(exported.loc[0, 'NUM_DOMINATED_BY'], 0)
 

@@ -4,20 +4,21 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-if importlib.util.find_spec('streamlit'):
+ROOT = Path(__file__).resolve().parents[1]
+
+if (ROOT / 'streamlit_app.py').is_file() and importlib.util.find_spec('streamlit'):
     from streamlit.testing.v1 import AppTest
 else:
     AppTest = None
 
 
-ROOT = Path(__file__).resolve().parents[1]
 RESULT_KEY = '_svmfsmeta_result'
 CSV = ('0;-1;10;100;5;15;7;12\n1;-1;20;200;10;30;14;24\n'
        '2;1;30;300;15;45;21;36\n3;1;40;400;20;60;28;48\n')
 SMALL_CSV = '0;-1;.1;.2\n1;-1;.2;.3\n2;1;.8;.7\n3;1;.9;.8\n'
 
 
-@unittest.skipIf(AppTest is None, 'Streamlit repository dependencies are optional')
+@unittest.skipIf(AppTest is None, 'Streamlit repository files and dependencies are optional')
 class TestStreamlitApp(unittest.TestCase):
     def setUp(self):
         state = random.getstate()

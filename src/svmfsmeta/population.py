@@ -251,8 +251,8 @@ class Population:
         crossover to generate offspring, and applies mutation based on predefined probabilities.
         The new population is expanded to 2 * population_size. The method ensures that only valid
         solutions are added to the population. Duplicate offspring are accepted
-        when allow_clones is true. Repair attempts are bounded, and 100 consecutive
-        rejected offspring raise RuntimeError. Accepting an offspring resets
+        when allow_clones is true. Invalid children and forbidden clones are
+        rejected; 100 consecutive rejections raise RuntimeError. Acceptance resets
         the rejection counter.
 
         Parameters
@@ -285,7 +285,6 @@ class Population:
         None
         """
         i = len(self.solutions)
-        max_attempts = 10
         consecutive_rejections = 0
         max_rejections = 100
         
@@ -311,48 +310,10 @@ class Population:
                         inputs,
                         output
                     )
-                # Try to regenerate an invalid child without an unbounded loop.
+                # Like R, reject invalid children and forbidden clones instead
+                # of introducing extra regeneration or mutation attempts.
                 valid = child.evaluate_solution(data, output, inputs) == 1
-                validity_attempts = 0
-                while not valid and validity_attempts < max_attempts:
-                    child.generate_random_solution(
-                        data, inputs, output, len(child.features)
-                    )
-                    validity_attempts += 1
-                    valid = child.evaluate_solution(data, output, inputs) == 1
 
-                attempts = 0
-                # Check for clones and mutate if needed
-                while (valid and not allow_clones and attempts < max_attempts and
-                       self.check_clones(child, method)):
-                    child.mutate_solution(
-                        p_mutate_individual,
-                        p_mutate_feature,
-                        p_mutate_coord,
-                        coord_mutation_type,
-                        data,
-                        inputs,
-                        output
-                    )
-
-                    # Ensure the solution is valid
-                    valid = child.evaluate_solution(data, output, inputs) == 1
-                    validity_attempts = 0
-                    while not valid and validity_attempts < max_attempts:
-                        child.mutate_solution(
-                            p_mutate_individual,
-                            p_mutate_feature,
-                            p_mutate_coord,
-                            coord_mutation_type,
-                            data,
-                            inputs,
-                            output
-                        )
-                        validity_attempts += 1
-                        valid = child.evaluate_solution(data, output, inputs) == 1
-                    attempts += 1
-                
-                
                 # Accept valid children, allowing duplicates when requested.
                 if valid and (allow_clones or not self.check_clones(child, method)):
                     # Add valid child to the population
@@ -615,7 +576,7 @@ class Population:
         This method uses the concept of dominance in multi-objective optimization to compare the two offspring.
         A candidate with finite active objectives is preferred to an invalid
         candidate before dominance is considered. Two invalid candidates tie;
-        any invalid child returned by crossover is repaired before acceptance.
+        invalid children returned by crossover are rejected before acceptance.
         If both candidates are valid, dominance selects the winner and ties
         are broken randomly.
 

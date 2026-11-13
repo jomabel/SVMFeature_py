@@ -1,6 +1,6 @@
 from hashlib import sha256
 
-from sklearn.preprocessing import MinMaxScaler
+from svmfsmeta.preprocessing import minmax_scale
 from pandas import read_csv, DataFrame
 from pandas.util import hash_pandas_object
 from streamlit import (header, file_uploader, checkbox, selectbox, number_input, radio,
@@ -66,15 +66,14 @@ def show_simulation():
         output_col = data.columns[0]
         input_cols = data.columns[1:].tolist()
         response = data[output_col]
-        if not response.isin([-1, 1]).all() or set(response.unique()) != {-1, 1}:
+        if (not response.isin([-1, 1]).all() or set(response.unique()) != {-1, 1} or
+                response.value_counts().min() < 2):
             raise ValueError(
-                'The response must contain both numeric labels -1 and 1 only. '
+                'The response must contain -1 and 1 only, with at least two observations per class. '
                 'For legacy files with a weights row, enable First row contains feature weights/costs.'
             )
         if normalize:
-            scaled_features = MinMaxScaler().fit_transform(data[input_cols])
-            data_scaled = DataFrame(scaled_features, columns=input_cols)
-            data_scaled[output_col] = response.to_numpy()
+            data_scaled = minmax_scale(data, input_cols)
         else:
             data_scaled = data.copy()
         fingerprint = sha256(hash_pandas_object(data_scaled, index=True).values.tobytes()).hexdigest()
@@ -103,7 +102,7 @@ def show_simulation():
         coord_mutation_type = selectbox('Coordinate mutation type', [0, 1], index=0,
                                         help='0: Scaling, 1: Full replacement')
 
-    request = (dataset_name, tuple(data_scaled.columns), fingerprint, method, population_size,
+    request = (dataset_name, normalize, tuple(data_scaled.columns), fingerprint, method, population_size,
                num_features, iter_type, iter_val, allow_clones, p_mutation,
                p_mutate_individual, p_mutate_feature, p_mutate_coord, coord_mutation_type)
     result = session_state.get(RESULT_KEY)

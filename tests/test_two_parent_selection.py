@@ -28,18 +28,18 @@ class TestTwoParentSelection(unittest.TestCase):
                     self.assertIs(father, population.solutions[best_id])
                     self.assertIs(mother, population.solutions[1 - best_id])
 
-    def test_public_optimizer_trains_two_individuals_for_multiple_generations(self):
+    def test_public_optimizer_trains_minimum_r_population_for_multiple_generations(self):
         data = pd.DataFrame({'y': [-1, -1, 1, 1],
                              'x1': [0., .5, 1., 0.], 'x2': [2., 0., 0., 1.]})
         for method in ('MC', 'DIST-EPS'):
             for allow_clones in (0, 1):
                 with self.subTest(method=method, allow_clones=allow_clones):
                     random.seed(2)
-                    optimizer = SVMFsMeta(method, data, 2, ['x1', 'x2'], 'y', 2,
+                    optimizer = SVMFsMeta(method, data, 3, ['x1', 'x2'], 'y', 2,
                                            allow_clones=allow_clones)
                     optimizer.run(train='iter', num_iter=3)
-                    self.assertEqual(len(optimizer.population.solutions), 2)
-                    self.assertEqual([s.solution_id for s in optimizer.population.solutions], [0, 1])
+                    self.assertEqual(len(optimizer.population.solutions), 3)
+                    self.assertEqual([s.solution_id for s in optimizer.population.solutions], [0, 1, 2])
                     for candidate in optimizer.population.solutions:
                         self.assertEqual(candidate.evaluate_solution(data, 'y', ['x1', 'x2']), 1)
 

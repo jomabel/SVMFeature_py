@@ -2,7 +2,7 @@ import sys
 import os
 import argparse
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler
+from src.svmfsmeta.preprocessing import minmax_scale
 from pandas import read_csv, DataFrame
 
 from src.svmfsmeta import SVMFsMeta
@@ -133,10 +133,7 @@ def main():
         data.reset_index(drop=True, inplace=True)
 
         if normalize:
-            scaler = MinMaxScaler()
-            scaled_features = scaler.fit_transform(data[input_cols])
-            data_scaled = DataFrame(scaled_features, columns=input_cols)
-            data_scaled[output_col] = data[output_col].values
+            data_scaled = minmax_scale(data, input_cols)
         else:
             data_scaled = data.copy()
 

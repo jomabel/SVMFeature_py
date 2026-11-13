@@ -94,7 +94,7 @@ class TestCrossoverValidity(unittest.TestCase):
         winner, _ = Population.select_best_offspring(invalid, valid, 'MC')
         self.assertIs(winner, valid)
 
-    def test_one_valid_child_is_kept_and_second_slot_can_be_repaired(self):
+    def test_one_valid_child_is_kept_and_invalid_slot_can_be_rejected(self):
         data = self.data.copy()
         data['x2'] = [2.0, 0.0, 0.0, 2.0]
         for method in ('MC', 'DIST-EPS'):

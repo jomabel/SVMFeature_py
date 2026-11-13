@@ -97,7 +97,7 @@ This example loads the same `Colon` dataset as the R package: 62 samples and
 ```python
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
+from svmfsmeta.preprocessing import minmax_scale
 from skdatasets.repositories.cran import fetch_dataset
 from svmfsmeta import SVMFsMeta
 
@@ -112,8 +112,7 @@ output_col = "y"
 input_cols = data.columns.drop(output_col).tolist()
 
 # Optional: scale predictors to [0, 1].
-scaler = MinMaxScaler()
-data[input_cols] = scaler.fit_transform(data[input_cols])
+data = minmax_scale(data, input_cols)
 
 optimizer = SVMFsMeta(
     method="DIST-EPS",  # "DIST-EPS" or "MC"
@@ -152,7 +151,7 @@ The main class to initialize and run the optimization.
 | :--- | :--- | :--- | :--- |
 | `method` | `str` | Required | Objective pair: `"DIST-EPS"` or `"MC"`. |
 | `data` | `pd.DataFrame` | Required | Dataset containing the response and predictors. |
-| `population_size` | `int` | Required | Number of candidates in the population; at least 2. |
+| `population_size` | `int` | Required | Number of candidates in the population; at least 3. |
 | `inputs` | `list[str]` | Required | Names of predictor columns. |
 | `output` | `str` | Required | Name of the response column. |
 | `num_selected_features` | `int` | Required | Exact number of predictors selected in each candidate, from 1 to `len(inputs)`. |
@@ -169,7 +168,7 @@ non-empty DataFrame with unique column names and unique row index labels.
 `inputs` must be a non-empty list or tuple of unique existing column names,
 and must exclude `output`. Selected predictors must contain only finite real
 numeric values. The response must contain both numeric labels `-1` and `1`,
-with no missing values or other classes. Unused columns are not validated for
+with at least two observations per class and no missing values or other classes. Unused columns are not validated for
 numeric content.
 
 Population and feature counts must be integers; booleans are not counts.
@@ -178,19 +177,42 @@ All four mutation probabilities must be finite real numbers in `[0, 1]`.
 `logger` must be `None`, a callable, or an object with a callable `info` method.
 Invalid configuration raises `TypeError` or `ValueError` naming the parameter.
 
-### `run(train="sec", num_iter=10)`
+### `run(train="iter", num_iter=None)`
 
-Generates the initial population and runs NSGA-II.
+Generates the initial population on first use and runs NSGA-II. The method
+returns the optimizer itself. Repeated calls continue the current population
+when data, index labels, method, predictor selection and population size are
+unchanged. Changing a structural setting starts a fresh population. To restart
+explicitly, set `optimizer.population = None` before calling `run()`.
 
 - `train="iter"` requires a positive integer `num_iter` and runs that many
-  iterations.
+  iterations. With `num_iter=None`, the default is 10 iterations.
 - `train="sec"` requires a positive finite number of seconds; fractional
-  seconds are accepted. The limit is approximate: initialization happens first
-  and an iteration already underway is allowed to finish.
+  seconds are accepted. With `num_iter=None`, the default is 300 seconds.
+  The limit is approximate: initialization happens first and an iteration
+  already underway is allowed to finish.
 
 Configuration and the training budget are checked again before generating
-candidates or replacing an existing population. Zero, negative, non-finite,
+candidates or changing an existing population. Zero, negative, non-finite,
 and boolean budgets are rejected; `train` must be `"iter"` or `"sec"`.
+
+The genetic operators follow the R implementation: proportional coordinate
+mutation uses a percentage in `[0, 0.25]`, and any resulting coordinate outside
+`[-1, 1]` is divided by 10. Invalid offspring and forbidden clones are discarded
+rather than regenerated or given extra mutation attempts. One hundred
+consecutive rejected children stop offspring generation with a clear error.
+The standard mutation probabilities and clone tolerances are unchanged.
+
+`minmax_scale(data, inputs)` returns a copy with selected predictors scaled to
+`[0, 1]` and constant predictors mapped to `0.5`, as in the R examples. The
+optimizer does not apply normalization automatically. All Colon examples use
+`plsgenomics` 1.5-3; the local TXT files are not used by `example_usage.py`.
+A precision metric with no predicted positives is undefined (`NaN`), while F1
+is zero, matching the R metric helpers.
+
+Python retains zero-based fronts and SOL identifiers and uses pandas index
+labels for anchor observations. R and Python use different random-number
+streams; equal numeric seeds do not guarantee identical search trajectories.
 
 The final population is available as `optimizer.population`. Its
 `solutions_df` table contains candidate summaries and their `FRONT` values.

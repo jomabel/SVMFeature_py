@@ -1,8 +1,8 @@
-from math import isfinite
+from math import isfinite, isnan
 from numbers import Real
 from random import uniform, randint, sample, choice
 from sys import float_info
-from numpy import dot, mean, sign
+from numpy import dot, mean, sign, unique
 from numpy.linalg import norm
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score, \
     cohen_kappa_score, roc_auc_score
@@ -185,16 +185,22 @@ class Solution:
         self.vectors = [self.get_class_vector(class_, data, output) for class_ in classes]
 
         # Randomly select 'num_features' without duplicates
-        selected_features = sample(inputs, num_features)
-
-        # Sort the selected features for consistency
-        self.features = sorted(selected_features)
+        if num_features == len(inputs):
+            self.features = list(inputs)
+        else:
+            self.features = sorted(sample(inputs, num_features))
 
         # Generate random coordinates for the plane within the range [-1, 1]
         self.plane_coords = [uniform(-1, 1) for _ in range(num_features)]
 
         # Filter the dataset based on the selected features and vectors
         self.solution_data = data.loc[self.vectors, self.features]
+
+    def _invalidate_evaluation(self):
+        self.objective = [float('nan')] * 4
+        self.conf_matrix = None
+        self.accuracy = self.precision = self.recall = self.f1 = None
+        self.kappa = self.auc = None
 
     def evaluate_solution(self, data, output, inputs):
         """
@@ -217,11 +223,8 @@ class Solution:
         """
         # Clear previous results before validating changed genes. An invalid
         # candidate must not retain zero defaults or an earlier good score.
-        self.objective = [float('nan')] * 4
+        self._invalidate_evaluation()
         self.plane_term_b = []
-        self.conf_matrix = None
-        self.accuracy = self.precision = self.recall = self.f1 = None
-        self.kappa = self.auc = None
 
         if (
             not isinstance(self.plane_coords, (list, tuple)) or
@@ -255,6 +258,9 @@ class Solution:
 
         self.calculate_distance_objective()
         self.calculate_epsilon_objective(data, output)
+        if not all(isfinite(value) for value in self.objective):
+            self._invalidate_evaluation()
+            return 0
 
         return 1
 
@@ -283,7 +289,14 @@ class Solution:
             self.plane_term_b.append(-independent_term)
 
         # Add the intermediate plane (mean of the bias terms)
-        self.plane_term_b.append(mean(self.plane_term_b))
+        if (len(self.plane_term_b) == 2 and
+                max(abs(value) for value in self.plane_term_b) > float_info.max / 2 and
+                (self.plane_term_b[0] > 0) == (self.plane_term_b[1] > 0)):
+            # Halve before adding to avoid overflowing a finite midpoint.
+            middle = self.plane_term_b[0] / 2 + self.plane_term_b[1] / 2
+        else:
+            middle = mean(self.plane_term_b)
+        self.plane_term_b.append(middle)
 
     @staticmethod
     def get_class_vector(class_, data, output):
@@ -392,13 +405,21 @@ class Solution:
         self.objective[2] = int(self.conf_matrix[1, 0])  # FN: class 1 predicted as -1
         self.objective[3] = int(self.conf_matrix[0, 1])  # FP: class -1 predicted as 1
         self.accuracy = accuracy_score(y_true, y_pred)
-        self.precision = precision_score(y_true, y_pred, zero_division=0, pos_label=1)
+        self.precision = precision_score(y_true, y_pred, zero_division=float('nan'), pos_label=1)
         self.recall = recall_score(y_true, y_pred, zero_division=0, pos_label=1)
         self.f1 = f1_score(y_true, y_pred, zero_division=0, pos_label=1)
         self.kappa = cohen_kappa_score(y_true, y_pred, labels=[-1,1])
 
         y_true_auc = [(1 if y == 1 else 0) for y in y_true]
-        self.auc = roc_auc_score(y_true_auc, decision_scores)             
+        scores_for_auc = decision_scores
+        if not all(isfinite(score) for score in decision_scores):
+            if any(isnan(score) for score in decision_scores):
+                self._invalidate_evaluation()
+                return
+            # R's rank-based AUC accepts infinite extremes. Dense ranks retain
+            # ordering and ties while supplying finite values to scikit-learn.
+            scores_for_auc = unique(decision_scores, return_inverse=True)[1]
+        self.auc = roc_auc_score(y_true_auc, scores_for_auc)
 
 
     def dominates_solution(self, other_solution, method):
@@ -562,15 +583,13 @@ class Solution:
         for i, coord in enumerate(self.plane_coords):
             if uniform(0, 1) < p_mutate_coord:
                 if coord_mutation_type == 0:
-                    percentage = uniform(0.05, 0.25)
+                    percentage = uniform(0, 0.25)
                     if uniform(0, 1) < 0.5:  # Increase
                         coord *= (1 + percentage)
-                        if coord > 1:
-                            coord /= 10
                     else:  # Decrease
                         coord *= (1 - percentage)
-                        if coord < -1:
-                            coord /= 10
+                    if abs(coord) > 1:
+                        coord /= 10
                     self.plane_coords[i] = coord
                 else:
                     self.plane_coords[i] = uniform(-1, 1)

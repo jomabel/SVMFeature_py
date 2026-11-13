@@ -150,7 +150,7 @@ class TestPopulationTermination(unittest.TestCase):
                 self.expand(population)
         self.assertEqual(len(population.solutions), 3)
 
-    def test_persistent_invalid_children_stop_after_bounded_regeneration(self):
+    def test_persistent_invalid_children_stop_without_regeneration(self):
         population = self.population()
         regenerations = 0
 
@@ -171,7 +171,7 @@ class TestPopulationTermination(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "100.*consecutive"):
                 self.expand(population)
         self.assertEqual(len(population.solutions), 3)
-        self.assertEqual(regenerations, 1000)
+        self.assertEqual(regenerations, 0)
 
     def test_acceptance_resets_the_offspring_rejection_counter(self):
         population = self.population()
